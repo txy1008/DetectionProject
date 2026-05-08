@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Model weights (too large for git)
+models/*.pt
+
+# Runtime outputs
+captures/
+results/
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Database
+*.db
