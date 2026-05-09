@@ -260,7 +260,7 @@ class MainWindow(QMainWindow):
             "例如: 0.2,0.3,0.8,0.7\n"
             "表示画面 20%~80% 宽度, 30%~70% 高度\n"
             "输入 clear 清除所有区域",
-            "0.2,0.3,0.8,0.7")
+            text="0.2,0.3,0.8,0.7")
 
         if ok and text:
             if text.strip().lower() == "clear":

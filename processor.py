@@ -5,6 +5,7 @@ import mysql.connector
 import pandas as pd
 from datetime import datetime
 from ultralytics import YOLO
+from deep_sort_realtime.deepsort_tracker import DeepSort
 
 import config
 from ui.alert_manager import AlertManager
@@ -27,6 +28,9 @@ class DetectionProcessor:
         self.session_name = ""
         self.session_path = ""
 
+        # DeepSORT 追踪器
+        self.tracker = self._create_tracker()
+
         # 越线计数相关
         self.track_history = {}   # {id: [(cx, cy), ...]}
         self.line_y = None        # 检测线 Y 坐标
@@ -42,6 +46,17 @@ class DetectionProcessor:
 
         # 告警管理器
         self.alert_manager = AlertManager()
+
+    @staticmethod
+    def _create_tracker():
+        """创建 DeepSORT 追踪器实例"""
+        return DeepSort(
+            max_age=config.DEEPSORT_MAX_AGE,
+            n_init=config.DEEPSORT_N_INIT,
+            nn_budget=config.DEEPSORT_NN_BUDGET,
+            embedder=config.DEEPSORT_EMBEDDER,
+            embedder_gpu=config.DEEPSORT_EMBEDDER_GPU
+        )
 
     def start_session(self):
         """初始化新场次"""
@@ -67,6 +82,7 @@ class DetectionProcessor:
         self.track_history.clear()
         self.heatmap_data = None
         self.speed_estimates.clear()
+        self.tracker = self._create_tracker()  # 重置 DeepSORT 追踪器
         self.db_connected = True
         return self.session_name
 
@@ -82,12 +98,10 @@ class DetectionProcessor:
         if self.line_y is None:
             self.line_y = int(h * config.LINE_POSITION_RATIO)
 
-        if is_image:
-            results = self.model(frame, classes=self.target_classes, conf=config.CONF_IMAGE, verbose=False)
-        else:
-            results = self.model.track(frame, persist=True, classes=self.target_classes,
-                                       conf=config.CONF_VIDEO, iou=config.IOU_THRESHOLD,
-                                       tracker="bytetrack.yaml", verbose=False)
+        # ========== YOLO 检测（不做追踪，追踪交给 DeepSORT） ==========
+        conf_threshold = config.CONF_IMAGE if is_image else config.CONF_VIDEO
+        results = self.model(frame, classes=self.target_classes, conf=conf_threshold,
+                             iou=config.IOU_THRESHOLD, verbose=False)
 
         annotated_frame = frame.copy()
         new_records = []
@@ -98,86 +112,113 @@ class DetectionProcessor:
             cv2.putText(annotated_frame, f"UP:{self.line_counts['up']} DOWN:{self.line_counts['down']}",
                         (10, self.line_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
-        if results[0].boxes is not None:
+        if results[0].boxes is not None and len(results[0].boxes) > 0:
             boxes = results[0].boxes.xyxy.cpu().numpy()
             clss = results[0].boxes.cls.cpu().numpy().astype(int)
             confs = results[0].boxes.conf.cpu().numpy()
 
-            if not is_image and results[0].boxes.id is not None:
-                ids = results[0].boxes.id.cpu().numpy().astype(int)
+            if is_image:
+                # 单图模式：不追踪
+                for box, cls, conf in zip(boxes, clss, confs):
+                    obj_name = self.class_mapping.get(cls, "unknown")
+                    self.heatmap_data[max(0, int(box[1])):min(h, int(box[3])),
+                                      max(0, int(box[0])):min(w, int(box[2]))] += 1
+
+                    self.save_count += 1
+                    if obj_name in self.counters:
+                        self.counters[obj_name] += 1
+                    record = self.save_data(frame, box, "IMG", obj_name, conf, self.save_count)
+                    new_records.append(record)
+
+                    color_map = {"person": (0, 255, 0), "car": (255, 128, 0), "bicycle": (255, 200, 0)}
+                    color = color_map.get(obj_name, (128, 128, 128))
+                    cv2.rectangle(annotated_frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), color, 2)
+                    cv2.putText(annotated_frame, f"{obj_name} {conf:.2f}",
+                                (int(box[0]), int(box[1] - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
             else:
-                ids = [None] * len(boxes)
+                # ========== 视频模式：DeepSORT 追踪 ==========
+                # 准备 DeepSORT 输入格式: ([left, top, w, h], confidence, class_id)
+                raw_detections = []
+                for box, cls, conf in zip(boxes, clss, confs):
+                    x1, y1, x2, y2 = box
+                    bw, bh = x2 - x1, y2 - y1
+                    raw_detections.append(([x1, y1, bw, bh], float(conf), int(cls)))
 
-            for box, raw_id, cls, conf in zip(boxes, ids, clss, confs):
-                obj_name = self.class_mapping.get(cls, "unknown")
-                display_id = raw_id if raw_id is not None else "IMG"
+                # DeepSORT 更新（传入原图用于提取外观特征）
+                tracks = self.tracker.update_tracks(raw_detections, frame=frame)
 
-                # 计算目标中心点
-                cx = int((box[0] + box[2]) / 2)
-                cy = int((box[1] + box[3]) / 2)
+                tracked_boxes = []
+                tracked_names = []
 
-                # 更新热力图
-                self.heatmap_data[max(0, int(box[1])):min(h, int(box[3])),
-                                  max(0, int(box[0])):min(w, int(box[2]))] += 1
+                for track in tracks:
+                    if not track.is_confirmed():
+                        continue
 
-                # 越线检测（视频模式）
-                if not is_image and raw_id is not None:
-                    if raw_id not in self.track_history:
-                        self.track_history[raw_id] = []
-                    self.track_history[raw_id].append((cx, cy))
+                    track_id = track.track_id
+                    ltrb = track.to_ltrb()  # [x1, y1, x2, y2]
+                    det_class = track.det_class
+                    det_conf = track.det_conf if track.det_conf is not None else 0.0
+                    obj_name = self.class_mapping.get(det_class, "unknown")
 
-                    if len(self.track_history[raw_id]) >= 2 and raw_id not in self.crossed_ids:
-                        prev_y = self.track_history[raw_id][-2][1]
+                    x1, y1, x2, y2 = ltrb
+                    tracked_boxes.append([x1, y1, x2, y2])
+                    tracked_names.append(obj_name)
+
+                    # 计算目标中心点
+                    cx = int((x1 + x2) / 2)
+                    cy = int((y1 + y2) / 2)
+
+                    # 更新热力图
+                    self.heatmap_data[max(0, int(y1)):min(h, int(y2)),
+                                      max(0, int(x1)):min(w, int(x2))] += 1
+
+                    # 越线检测
+                    if track_id not in self.track_history:
+                        self.track_history[track_id] = []
+                    self.track_history[track_id].append((cx, cy))
+
+                    if len(self.track_history[track_id]) >= 2 and track_id not in self.crossed_ids:
+                        prev_y = self.track_history[track_id][-2][1]
                         curr_y = cy
                         if prev_y < self.line_y <= curr_y:
                             self.line_counts["down"] += 1
-                            self.crossed_ids.add(raw_id)
+                            self.crossed_ids.add(track_id)
                         elif prev_y > self.line_y >= curr_y:
                             self.line_counts["up"] += 1
-                            self.crossed_ids.add(raw_id)
+                            self.crossed_ids.add(track_id)
 
-                    # 速度估计：取最近 5 帧的平均位移
-                    hist = self.track_history[raw_id]
+                    # 速度估计
+                    hist = self.track_history[track_id]
                     if len(hist) >= 5:
                         dx = hist[-1][0] - hist[-5][0]
                         dy = hist[-1][1] - hist[-5][1]
                         dist = (dx ** 2 + dy ** 2) ** 0.5
-                        speed_pf = dist / 5  # 像素/帧
-                        self.speed_estimates[raw_id] = speed_pf
+                        self.speed_estimates[track_id] = dist / 5
 
-                should_save = False
-                if is_image:
-                    should_save = True
-                else:
-                    if raw_id is not None:
-                        self.id_buffer[raw_id] = self.id_buffer.get(raw_id, 0) + 1
-                        if self.id_buffer[raw_id] >= config.STABLE_FRAMES and raw_id not in self.confirmed_ids:
-                            self.confirmed_ids.add(raw_id)
-                            should_save = True
+                    # 保存新目标
+                    self.id_buffer[track_id] = self.id_buffer.get(track_id, 0) + 1
+                    if self.id_buffer[track_id] >= config.STABLE_FRAMES and track_id not in self.confirmed_ids:
+                        self.confirmed_ids.add(track_id)
+                        self.save_count += 1
+                        if obj_name in self.counters:
+                            self.counters[obj_name] += 1
+                        record = self.save_data(frame, [x1, y1, x2, y2], track_id, obj_name, det_conf, self.save_count)
+                        new_records.append(record)
 
-                if should_save:
-                    self.save_count += 1
-                    if obj_name in self.counters:
-                        self.counters[obj_name] += 1
-                    record = self.save_data(frame, box, display_id, obj_name, conf, self.save_count)
-                    new_records.append(record)
+                    # 绘制检测框
+                    color_map = {"person": (0, 255, 0), "car": (255, 128, 0), "bicycle": (255, 200, 0)}
+                    color = color_map.get(obj_name, (128, 128, 128))
+                    cv2.rectangle(annotated_frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
+                    label = f"{obj_name} ID:{track_id} {det_conf:.2f}"
+                    if track_id in self.speed_estimates:
+                        label += f" v:{self.speed_estimates[track_id]:.1f}px/f"
+                    cv2.putText(annotated_frame, label, (int(x1), int(y1 - 10)),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
-                # 绘制检测框
-                color_map = {"person": (0, 255, 0), "car": (255, 128, 0), "bicycle": (255, 200, 0)}
-                color = color_map.get(obj_name, (128, 128, 128))
-                cv2.rectangle(annotated_frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), color, 2)
-                label = f"{obj_name} ID:{display_id} {conf:.2f}"
-                # 显示速度估计
-                if raw_id is not None and raw_id in self.speed_estimates:
-                    spd = self.speed_estimates[raw_id]
-                    label += f" v:{spd:.1f}px/f"
-                cv2.putText(annotated_frame, label, (int(box[0]), int(box[1] - 10)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-            # 区域入侵检测
-            if config.ALERT_ENABLED:
-                class_names = [self.class_mapping.get(c, "unknown") for c in clss]
-                self.alert_manager.check_intrusion(boxes, class_names)
+                # 区域入侵检测
+                if config.ALERT_ENABLED and tracked_boxes:
+                    self.alert_manager.check_intrusion(
+                        np.array(tracked_boxes), tracked_names)
 
         # 绘制告警区域
         annotated_frame = self.alert_manager.draw_zones(annotated_frame)
