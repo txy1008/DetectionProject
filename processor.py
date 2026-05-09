@@ -93,6 +93,9 @@ class DetectionProcessor:
         # 初始化热力图数据
         if self.heatmap_data is None:
             self.heatmap_data = np.zeros((h, w), dtype=np.float32)
+        else:
+            # 热力图衰减：每帧自动减淡，场景切换后旧数据会自然消退
+            self.heatmap_data *= 0.95
 
         # 设置越线检测线位置
         if self.line_y is None:
@@ -151,7 +154,8 @@ class DetectionProcessor:
                 tracked_names = []
 
                 for track in tracks:
-                    if not track.is_confirmed():
+                    # 只处理当前帧匹配到的轨迹，过滤掉“幽灵”轨迹
+                    if track.time_since_update > 0:
                         continue
 
                     track_id = track.track_id
@@ -159,6 +163,7 @@ class DetectionProcessor:
                     det_class = track.det_class
                     det_conf = track.det_conf if track.det_conf is not None else 0.0
                     obj_name = self.class_mapping.get(det_class, "unknown")
+                    is_confirmed = track.is_confirmed()
 
                     x1, y1, x2, y2 = ltrb
                     tracked_boxes.append([x1, y1, x2, y2])
@@ -195,9 +200,11 @@ class DetectionProcessor:
                         dist = (dx ** 2 + dy ** 2) ** 0.5
                         self.speed_estimates[track_id] = dist / 5
 
-                    # 保存新目标
+                    # 保存新目标（仅已确认轨迹）
+                    if not is_confirmed:
+                        pass  # 未确认轨迹只画框，不计数
                     self.id_buffer[track_id] = self.id_buffer.get(track_id, 0) + 1
-                    if self.id_buffer[track_id] >= config.STABLE_FRAMES and track_id not in self.confirmed_ids:
+                    if is_confirmed and self.id_buffer[track_id] >= config.STABLE_FRAMES and track_id not in self.confirmed_ids:
                         self.confirmed_ids.add(track_id)
                         self.save_count += 1
                         if obj_name in self.counters:
@@ -210,8 +217,6 @@ class DetectionProcessor:
                     color = color_map.get(obj_name, (128, 128, 128))
                     cv2.rectangle(annotated_frame, (int(x1), int(y1)), (int(x2), int(y2)), color, 2)
                     label = f"{obj_name} ID:{track_id} {det_conf:.2f}"
-                    if track_id in self.speed_estimates:
-                        label += f" v:{self.speed_estimates[track_id]:.1f}px/f"
                     cv2.putText(annotated_frame, label, (int(x1), int(y1 - 10)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
