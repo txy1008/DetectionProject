@@ -66,7 +66,7 @@ class DetectionProcessor:
         os.makedirs(config.CAPTURES_DIR, exist_ok=True)
 
         existing_reports = [f for f in os.listdir(config.RESULTS_DIR)
-                            if f.startswith(f"报告_{today}") and f.endswith(".csv")]
+                            if f.startswith(f"报告_{today}") and f.endswith(".docx")]
         run_index = len(existing_reports) + 1
 
         self.session_name = f"报告_{today}_第{run_index}次"
@@ -219,8 +219,6 @@ class DetectionProcessor:
 
         rec = {"ID": display_id, "类别": obj_name, "时间": now.strftime("%H:%M:%S"), "存储路径": full_path}
         self.session_records.append(rec)
-        pd.DataFrame(self.session_records).to_csv(
-            f"{config.RESULTS_DIR}/{self.session_name}.csv", index=False, encoding='utf-8-sig')
 
         return {"id": display_id, "type": obj_name, "time": rec["时间"], "img": img_name}
 
@@ -237,7 +235,7 @@ class DetectionProcessor:
             "car": self.counters["car"],
             "bicycle": self.counters["bicycle"],
             "person": self.counters["person"],
-            "db_status": "已连接" if self.db_connected else "未连接(仅CSV)"
+            "db_status": "已连接" if self.db_connected else "未连接"
         }
 
     def generate_word_report(self, save_path=None):

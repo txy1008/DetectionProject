@@ -1,6 +1,7 @@
 import os
 import io
 import pandas as pd
+import mysql.connector
 import matplotlib
 
 matplotlib.use("Agg")
@@ -65,26 +66,36 @@ class HistoryDialog(QDialog):
         self.current_df = None
 
     def _load_sessions(self):
-        """加载所有可用的 CSV 报告"""
+        """从数据库加载所有可用场次"""
         self.combo_session.clear()
-        if not os.path.exists(config.RESULTS_DIR):
-            return
-        csv_files = [f for f in os.listdir(config.RESULTS_DIR) if f.endswith(".csv")]
-        csv_files.sort(reverse=True)
-        for f in csv_files:
-            self.combo_session.addItem(f)
+        try:
+            conn = mysql.connector.connect(**config.DB_CONFIG)
+            cursor = conn.cursor()
+            cursor.execute("SELECT DISTINCT session_id FROM detections ORDER BY session_id DESC")
+            for (session_id,) in cursor.fetchall():
+                self.combo_session.addItem(session_id)
+            cursor.close()
+            conn.close()
+        except Exception:
+            pass
 
     def analyze(self):
         """分析选中的场次数据"""
-        filename = self.combo_session.currentText()
-        if not filename:
+        session_id = self.combo_session.currentText()
+        if not session_id:
             return
 
-        filepath = os.path.join(config.RESULTS_DIR, filename)
         try:
-            df = pd.read_csv(filepath, encoding='utf-8-sig')
+            conn = mysql.connector.connect(**config.DB_CONFIG)
+            df = pd.read_sql(
+                "SELECT obj_id AS ID, category AS 类别, "
+                "DATE_FORMAT(detect_time, '%%H:%%i:%%s') AS 时间, "
+                "img_path AS 存储路径 "
+                "FROM detections WHERE session_id = %s ORDER BY id",
+                conn, params=(session_id,))
+            conn.close()
         except Exception as e:
-            self.summary_label.setText(f"读取失败: {e}")
+            self.summary_label.setText(f"数据库读取失败: {e}")
             return
 
         if df.empty or "类别" not in df.columns:
@@ -92,7 +103,7 @@ class HistoryDialog(QDialog):
             return
 
         self.current_df = df
-        self._draw_charts(df, filename)
+        self._draw_charts(df, session_id)
 
     def _draw_charts(self, df, title):
         """绘制分析图表"""
@@ -121,7 +132,7 @@ class HistoryDialog(QDialog):
             self.axes[1].text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.3,
                               str(val), ha='center', fontsize=12, fontweight='bold')
 
-        self.figure.suptitle(title.replace('.csv', ''), fontsize=14, fontweight='bold')
+        self.figure.suptitle(title, fontsize=14, fontweight='bold')
         self.figure.tight_layout()
         self.canvas.draw()
 
@@ -139,7 +150,7 @@ class HistoryDialog(QDialog):
             QMessageBox.warning(self, "提示", "请先分析一个场次的数据")
             return
 
-        session_name = self.combo_session.currentText().replace('.csv', '')
+        session_name = self.combo_session.currentText()
         default_path = os.path.join(config.RESULTS_DIR, f"{session_name}.docx")
         path, _ = QFileDialog.getSaveFileName(self, "保存 Word 报告", default_path, "Word Files (*.docx)")
         if not path:
