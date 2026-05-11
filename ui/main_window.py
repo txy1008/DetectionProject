@@ -40,29 +40,41 @@ class MainWindow(QMainWindow):
         self.img_compare_widget = QWidget()
         img_compare_layout = QVBoxLayout(self.img_compare_widget)
         img_compare_layout.setContentsMargins(0, 0, 0, 0)
-        img_compare_layout.setSpacing(4)
+        img_compare_layout.setSpacing(2)
 
-        lbl_orig_title = QLabel("🖼 原图")
-        lbl_orig_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #555; padding: 2px;")
-        lbl_orig_title.setAlignment(Qt.AlignCenter)
+        title_style = "font-size: 12px; font-weight: bold; color: #666; margin: 0; padding: 0;"
+
+        lbl_orig_title = QLabel("▶ 原图")
+        lbl_orig_title.setStyleSheet(title_style)
+        lbl_orig_title.setAlignment(Qt.AlignLeft)
+        lbl_orig_title.setFixedHeight(18)
         img_compare_layout.addWidget(lbl_orig_title)
 
         self.img_original_label = QLabel()
         self.img_original_label.setAlignment(Qt.AlignCenter)
-        self.img_original_label.setStyleSheet("background-color: #1a1a1a; border-radius: 6px;")
-        self.img_original_label.setMinimumHeight(280)
-        img_compare_layout.addWidget(self.img_original_label)
+        self.img_original_label.setStyleSheet("background-color: #1a1a1a; border-radius: 4px;")
+        img_compare_layout.addWidget(self.img_original_label, 1)
 
-        self.lbl_detect_title = QLabel("🔍 检测结果（点击表格行可筛选单个目标）")
-        self.lbl_detect_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #555; padding: 2px;")
-        self.lbl_detect_title.setAlignment(Qt.AlignCenter)
-        img_compare_layout.addWidget(self.lbl_detect_title)
+        # 检测结果标题行（标题 + 显示全部按钮）
+        detect_title_row = QHBoxLayout()
+        detect_title_row.setContentsMargins(0, 0, 0, 0)
+        self.lbl_detect_title = QLabel("▶ 检测结果（点击表格行筛选目标）")
+        self.lbl_detect_title.setStyleSheet(title_style)
+        self.lbl_detect_title.setFixedHeight(18)
+        detect_title_row.addWidget(self.lbl_detect_title)
+        self.btn_show_all = QPushButton("显示全部")
+        self.btn_show_all.setFixedSize(70, 20)
+        self.btn_show_all.setStyleSheet(
+            "QPushButton { font-size: 11px; background: #0078D7; color: white; border-radius: 3px; padding: 0; }"
+            "QPushButton:hover { background: #005a9e; }")
+        self.btn_show_all.clicked.connect(self._restore_all_detections)
+        detect_title_row.addWidget(self.btn_show_all)
+        img_compare_layout.addLayout(detect_title_row)
 
         self.img_detect_label = QLabel()
         self.img_detect_label.setAlignment(Qt.AlignCenter)
-        self.img_detect_label.setStyleSheet("background-color: #1a1a1a; border-radius: 6px;")
-        self.img_detect_label.setMinimumHeight(280)
-        img_compare_layout.addWidget(self.img_detect_label)
+        self.img_detect_label.setStyleSheet("background-color: #1a1a1a; border-radius: 4px;")
+        img_compare_layout.addWidget(self.img_detect_label, 1)
 
         self.img_compare_widget.hide()
         left_panel.addWidget(self.img_compare_widget)
@@ -70,8 +82,9 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(left_panel, 7)
 
         # 图片检测结果缓存（用于点击筛选）
-        self._img_original_frame = None   # 原图 numpy
-        self._img_detections = []          # [{id, box, name, conf, color}, ...]
+        self._img_original_frame = None    # 原图 numpy
+        self._img_annotated_frame = None   # 全框检测图 numpy
+        self._img_detections = []           # [{id, box, name, conf, color}, ...]
 
         # ========== 右侧：控制面板 ==========
         right_panel = QVBoxLayout()
@@ -233,6 +246,7 @@ class MainWindow(QMainWindow):
             self._img_detections = []
 
             res_frame, records = self.processor.process_frame(frame, is_image=True)
+            self._img_annotated_frame = res_frame.copy()
 
             # 收集每个检测结果的详情（用于点击筛选）
             if hasattr(self.processor, '_last_image_detections'):
@@ -243,7 +257,7 @@ class MainWindow(QMainWindow):
             self.img_compare_widget.show()
             self._show_image_on_label(self._img_original_frame, self.img_original_label)
             self._show_image_on_label(res_frame, self.img_detect_label)
-            self.lbl_detect_title.setText("🔍 检测结果（点击表格行可筛选单个目标）")
+            self.lbl_detect_title.setText("▶ 检测结果（点击表格行筛选目标）")
 
             self.add_table_record(records)
             self.update_stats(self.processor.get_stats())
@@ -257,6 +271,7 @@ class MainWindow(QMainWindow):
         self.img_compare_widget.hide()
         self.video_label.show()
         self._img_original_frame = None
+        self._img_annotated_frame = None
         self._img_detections = []
         self.thread = VideoThread(source)
         self.thread.change_pixmap_signal.connect(self.update_image)
@@ -397,8 +412,15 @@ class MainWindow(QMainWindow):
                         (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 
         self._show_image_on_label(frame, self.img_detect_label)
-        self.lbl_detect_title.setText(f"🔍 筛选目标: #{selected_id}（点击其他行切换）")
+        self.lbl_detect_title.setText(f"▶ 筛选目标: #{selected_id}（点「显示全部」恢复）")
         self.log_output.append(f"🔍 已筛选目标 #{selected_id}")
+
+    def _restore_all_detections(self):
+        """恢复显示全部检测框"""
+        if self._img_annotated_frame is not None:
+            self._show_image_on_label(self._img_annotated_frame, self.img_detect_label)
+            self.lbl_detect_title.setText("▶ 检测结果（点击表格行筛选目标）")
+            self.table.clearSelection()
 
     def _show_image_on_label(self, frame, label):
         """将 numpy 图片显示到指定 QLabel"""
@@ -414,6 +436,7 @@ class MainWindow(QMainWindow):
         self.count_total.setText("0")
         self.table.setRowCount(0)
         self._img_original_frame = None
+        self._img_annotated_frame = None
         self._img_detections = []
 
     def _show_summary(self, processor):
