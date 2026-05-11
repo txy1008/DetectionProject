@@ -3,7 +3,7 @@ import numpy as np
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                                QPushButton, QLabel, QTextEdit, QFileDialog,
                                QTableWidget, QTableWidgetItem, QHeaderView,
-                               QGroupBox, QGridLayout, QTabWidget, QInputDialog,
+                               QGroupBox, QGridLayout, QTabWidget,
                                QMessageBox, QSlider)
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QImage, QPixmap
@@ -187,7 +187,6 @@ class MainWindow(QMainWindow):
         self.btn_img = QPushButton("📸 检测单张图片")
         self.btn_video = QPushButton("🎥 上传视频检测")
         self.btn_cam = QPushButton("🌐 开启实时摄像头")
-        self.btn_heatmap = QPushButton("🔥 热力图模式")
         self.btn_stop = QPushButton("🛑 停止运行")
 
         btn_toggle_style = ("QPushButton { padding: 10px; font-size: 14px; "
@@ -197,20 +196,10 @@ class MainWindow(QMainWindow):
         for b in [self.btn_img, self.btn_video, self.btn_cam]:
             b.setStyleSheet(btn_style)
             right_panel.addWidget(b)
-        self.btn_heatmap.setStyleSheet(btn_toggle_style)
-        self.btn_heatmap.setCheckable(True)
-        right_panel.addWidget(self.btn_heatmap)
 
         self.btn_history = QPushButton("📈 历史数据分析")
         self.btn_history.setStyleSheet(btn_toggle_style)
         right_panel.addWidget(self.btn_history)
-
-        self.btn_alert = QPushButton("⚠ 设置告警区域")
-        self.btn_alert.setStyleSheet(
-            "QPushButton { padding: 10px; font-size: 14px; "
-            "background-color: #ffc107; color: #333; border-radius: 4px; }"
-            "QPushButton:hover { background-color: #e0a800; }")
-        right_panel.addWidget(self.btn_alert)
 
         self.btn_stop.setStyleSheet(btn_stop_style)
         right_panel.addWidget(self.btn_stop)
@@ -221,14 +210,11 @@ class MainWindow(QMainWindow):
         self.btn_cam.clicked.connect(lambda: self.start_task(0))
         self.btn_video.clicked.connect(self.select_video)
         self.btn_img.clicked.connect(self.select_image)
-        self.btn_heatmap.clicked.connect(self.toggle_heatmap)
         self.btn_history.clicked.connect(self.open_history)
-        self.btn_alert.clicked.connect(self.setup_alert_zone)
         self.btn_stop.clicked.connect(self.stop_all)
 
         self.thread = None
         self.processor = DetectionProcessor()  # 用于单图检测
-        self.show_heatmap = False
 
     # ==================== 业务逻辑 ====================
 
@@ -293,9 +279,6 @@ class MainWindow(QMainWindow):
 
     @Slot(np.ndarray)
     def update_image(self, frame):
-        # 热力图叠加
-        if self.show_heatmap and self.thread and self.thread.processor:
-            frame = self.thread.processor.get_heatmap_overlay(frame)
         h, w, c = frame.shape
         q_img = QImage(frame.data, w, h, w * c, QImage.Format_RGB888).rgbSwapped()
         self.video_label.setPixmap(QPixmap.fromImage(q_img).scaled(
@@ -333,53 +316,6 @@ class MainWindow(QMainWindow):
     def open_history(self):
         dialog = HistoryDialog(self)
         dialog.exec()
-
-    def setup_alert_zone(self):
-        """设置告警区域 - 通过输入坐标比例"""
-        processor = self._get_active_processor()
-        if not processor:
-            QMessageBox.information(self, "提示", "请先启动检测任务")
-            return
-
-        text, ok = QInputDialog.getText(
-            self, "设置告警区域",
-            "输入区域坐标比例 (x1,y1,x2,y2)\n"
-            "例如: 0.2,0.3,0.8,0.7\n"
-            "表示画面 20%~80% 宽度, 30%~70% 高度\n"
-            "输入 clear 清除所有区域",
-            text="0.2,0.3,0.8,0.7")
-
-        if ok and text:
-            if text.strip().lower() == "clear":
-                processor.alert_manager.clear_zones()
-                self.log_output.append("⚠ 已清除所有告警区域")
-                return
-            try:
-                parts = [float(x.strip()) for x in text.split(",")]
-                if len(parts) != 4:
-                    raise ValueError
-                h = self.video_label.pixmap().height() if self.video_label.pixmap() else 720
-                w = self.video_label.pixmap().width() if self.video_label.pixmap() else 1280
-                # 使用实际视频尺寸
-                if processor.heatmap_data is not None:
-                    h, w = processor.heatmap_data.shape
-                x1, y1 = int(parts[0] * w), int(parts[1] * h)
-                x2, y2 = int(parts[2] * w), int(parts[3] * h)
-                processor.alert_manager.add_zone(x1, y1, x2, y2)
-                self.log_output.append(f"⚠ 告警区域已设置: ({x1},{y1})-({x2},{y2})")
-            except (ValueError, IndexError):
-                QMessageBox.warning(self, "格式错误", "请输入 4 个 0~1 之间的数字，用逗号分隔")
-
-    def _get_active_processor(self):
-        """获取当前活动的 processor"""
-        if self.thread and self.thread.processor:
-            return self.thread.processor
-        return None
-
-    def toggle_heatmap(self):
-        self.show_heatmap = self.btn_heatmap.isChecked()
-        status = "开启" if self.show_heatmap else "关闭"
-        self.log_output.append(f"🔥 热力图模式已{status}")
 
     def _on_conf_changed(self, value):
         """置信度滑块变化时实时更新"""

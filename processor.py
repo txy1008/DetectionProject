@@ -16,7 +16,6 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT
 
 import config
-from ui.alert_manager import AlertManager
 
 
 class DetectionProcessor:
@@ -45,15 +44,9 @@ class DetectionProcessor:
         # 动态置信度阈值（UI 可调）
         self.conf_threshold = config.CONF_VIDEO
 
-        # 热力图数据
-        self.heatmap_data = None
-
         # 速度估计相关 (像素/帧)
         self.speed_estimates = {}  # {id: speed_px_per_frame}
         self.fps_estimate = 15    # 默认 FPS——处理帧率
-
-        # 告警管理器
-        self.alert_manager = AlertManager()
 
     @staticmethod
     def _create_tracker():
@@ -86,7 +79,6 @@ class DetectionProcessor:
         self.save_count = 0
         self.counters = {"car": 0, "bicycle": 0, "person": 0}
         self.track_history.clear()
-        self.heatmap_data = None
         self.speed_estimates.clear()
         self.tracker = self._create_tracker()  # 重置 DeepSORT 追踪器
         self.db_connected = True
@@ -95,13 +87,6 @@ class DetectionProcessor:
     def process_frame(self, frame, is_image=False):
         """处理图像或视频帧"""
         h, w = frame.shape[:2]
-
-        # 初始化热力图数据
-        if self.heatmap_data is None:
-            self.heatmap_data = np.zeros((h, w), dtype=np.float32)
-        else:
-            # 热力图衰减：每帧自动减淡，场景切换后旧数据会自然消退
-            self.heatmap_data *= 0.95
 
         # ========== YOLO 检测（不做追踪，追踪交给 DeepSORT） ==========
         conf_threshold = self.conf_threshold
@@ -121,8 +106,6 @@ class DetectionProcessor:
                 self._last_image_detections = []
                 for box, cls, conf in zip(boxes, clss, confs):
                     obj_name = self.class_mapping.get(cls, "unknown")
-                    self.heatmap_data[max(0, int(box[1])):min(h, int(box[3])),
-                                      max(0, int(box[0])):min(w, int(box[2]))] += 1
 
                     self.save_count += 1
                     if obj_name in self.counters:
@@ -154,9 +137,6 @@ class DetectionProcessor:
                 # DeepSORT 更新（传入原图用于提取外观特征）
                 tracks = self.tracker.update_tracks(raw_detections, frame=frame)
 
-                tracked_boxes = []
-                tracked_names = []
-
                 for track in tracks:
                     # 只处理当前帧匹配到的轨迹，过滤掉“幽灵”轨迹
                     if track.time_since_update > 0:
@@ -170,16 +150,10 @@ class DetectionProcessor:
                     is_confirmed = track.is_confirmed()
 
                     x1, y1, x2, y2 = ltrb
-                    tracked_boxes.append([x1, y1, x2, y2])
-                    tracked_names.append(obj_name)
 
                     # 计算目标中心点
                     cx = int((x1 + x2) / 2)
                     cy = int((y1 + y2) / 2)
-
-                    # 更新热力图
-                    self.heatmap_data[max(0, int(y1)):min(h, int(y2)),
-                                      max(0, int(x1)):min(w, int(x2))] += 1
 
                     # 轨迹记录
                     if track_id not in self.track_history:
@@ -213,14 +187,6 @@ class DetectionProcessor:
                     label = f"{obj_name} ID:{track_id} {det_conf:.2f}"
                     cv2.putText(annotated_frame, label, (int(x1), int(y1 - 10)),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-                # 区域入侵检测
-                if config.ALERT_ENABLED and tracked_boxes:
-                    self.alert_manager.check_intrusion(
-                        np.array(tracked_boxes), tracked_names)
-
-        # 绘制告警区域
-        annotated_frame = self.alert_manager.draw_zones(annotated_frame)
 
         return annotated_frame, new_records
 
@@ -391,12 +357,4 @@ class DetectionProcessor:
             save_path = os.path.join(config.RESULTS_DIR, f"{self.session_name}.docx")
         doc.save(save_path)
         return save_path
-
-    def get_heatmap_overlay(self, frame):
-        """生成热力图叠加层"""
-        if self.heatmap_data is None:
-            return frame
-        heatmap_norm = cv2.normalize(self.heatmap_data, None, 0, 255, cv2.NORM_MINMAX)
-        heatmap_color = cv2.applyColorMap(heatmap_norm.astype(np.uint8), cv2.COLORMAP_JET)
-        overlay = cv2.addWeighted(frame, 0.6, heatmap_color, 0.4, 0)
-        return overlay
+

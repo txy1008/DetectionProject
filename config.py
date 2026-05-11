@@ -49,10 +49,6 @@ DB_CONFIG = {
 CAPTURES_DIR = "captures"
 RESULTS_DIR = "results"
 
-# ==================== 告警配置 ====================
-ALERT_ENABLED = True
-ALERT_SOUND = True  # 是否播放告警声音
-
 # ==================== UI 配置 ====================
 WINDOW_TITLE = "智慧路口视频监控系统专业版 v5.1 (DeepSORT)"
 WINDOW_WIDTH = 1600
