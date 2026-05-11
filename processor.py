@@ -39,11 +39,11 @@ class DetectionProcessor:
         # DeepSORT 追踪器
         self.tracker = self._create_tracker()
 
-        # 越线计数相关
+        # 轨迹历史（用于速度估计）
         self.track_history = {}   # {id: [(cx, cy), ...]}
-        self.line_y = None        # 检测线 Y 坐标
-        self.crossed_ids = set()  # 已越线的 ID
-        self.line_counts = {"up": 0, "down": 0}  # 上行/下行计数
+
+        # 动态置信度阈值（UI 可调）
+        self.conf_threshold = config.CONF_VIDEO
 
         # 热力图数据
         self.heatmap_data = None
@@ -85,8 +85,6 @@ class DetectionProcessor:
         self.session_records = []
         self.save_count = 0
         self.counters = {"car": 0, "bicycle": 0, "person": 0}
-        self.line_counts = {"up": 0, "down": 0}
-        self.crossed_ids.clear()
         self.track_history.clear()
         self.heatmap_data = None
         self.speed_estimates.clear()
@@ -105,23 +103,13 @@ class DetectionProcessor:
             # 热力图衰减：每帧自动减淡，场景切换后旧数据会自然消退
             self.heatmap_data *= 0.95
 
-        # 设置越线检测线位置
-        if self.line_y is None:
-            self.line_y = int(h * config.LINE_POSITION_RATIO)
-
         # ========== YOLO 检测（不做追踪，追踪交给 DeepSORT） ==========
-        conf_threshold = config.CONF_IMAGE if is_image else config.CONF_VIDEO
+        conf_threshold = config.CONF_IMAGE if is_image else self.conf_threshold
         results = self.model(frame, classes=self.target_classes, conf=conf_threshold,
                              iou=config.IOU_THRESHOLD, verbose=False)
 
         annotated_frame = frame.copy()
         new_records = []
-
-        # 绘制越线检测线
-        if not is_image:
-            cv2.line(annotated_frame, (0, self.line_y), (w, self.line_y), (0, 0, 255), 2)
-            cv2.putText(annotated_frame, f"UP:{self.line_counts['up']} DOWN:{self.line_counts['down']}",
-                        (10, self.line_y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
 
         if results[0].boxes is not None and len(results[0].boxes) > 0:
             boxes = results[0].boxes.xyxy.cpu().numpy()
@@ -185,20 +173,10 @@ class DetectionProcessor:
                     self.heatmap_data[max(0, int(y1)):min(h, int(y2)),
                                       max(0, int(x1)):min(w, int(x2))] += 1
 
-                    # 越线检测
+                    # 轨迹记录
                     if track_id not in self.track_history:
                         self.track_history[track_id] = []
                     self.track_history[track_id].append((cx, cy))
-
-                    if len(self.track_history[track_id]) >= 2 and track_id not in self.crossed_ids:
-                        prev_y = self.track_history[track_id][-2][1]
-                        curr_y = cy
-                        if prev_y < self.line_y <= curr_y:
-                            self.line_counts["down"] += 1
-                            self.crossed_ids.add(track_id)
-                        elif prev_y > self.line_y >= curr_y:
-                            self.line_counts["up"] += 1
-                            self.crossed_ids.add(track_id)
 
                     # 速度估计
                     hist = self.track_history[track_id]
@@ -274,11 +252,7 @@ class DetectionProcessor:
 
     def get_stats(self):
         """返回当前场次的实时统计数据"""
-        return {
-            **self.counters,
-            "line_up": self.line_counts["up"],
-            "line_down": self.line_counts["down"]
-        }
+        return {**self.counters}
 
     def get_summary(self):
         """返回场次结束时的统计摘要"""
@@ -289,8 +263,6 @@ class DetectionProcessor:
             "car": self.counters["car"],
             "bicycle": self.counters["bicycle"],
             "person": self.counters["person"],
-            "line_up": self.line_counts["up"],
-            "line_down": self.line_counts["down"],
             "db_status": "已连接" if self.db_connected else "未连接(仅CSV)"
         }
 
@@ -317,12 +289,11 @@ class DetectionProcessor:
         doc.add_heading('一、统计摘要', level=1)
         summary = self.get_summary()
         total = summary['total']
-        table_summary = doc.add_table(rows=4, cols=2, style='Light Shading Accent 1')
+        table_summary = doc.add_table(rows=3, cols=2, style='Light Shading Accent 1')
         table_summary.alignment = WD_TABLE_ALIGNMENT.CENTER
         summary_data = [
             ('检测总数', str(total)),
             ('机动车 / 非机动车 / 行人', f"{summary['car']} / {summary['bicycle']} / {summary['person']}"),
-            ('越线统计 (上行 / 下行)', f"{summary['line_up']} / {summary['line_down']}"),
             ('数据库状态', summary['db_status']),
         ]
         for i, (key, val) in enumerate(summary_data):

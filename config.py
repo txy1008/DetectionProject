@@ -49,10 +49,6 @@ DB_CONFIG = {
 CAPTURES_DIR = "captures"
 RESULTS_DIR = "results"
 
-# ==================== 越线计数配置 ====================
-# 检测线的默认 Y 坐标比例（0.0~1.0，表示画面高度的百分比）
-LINE_POSITION_RATIO = 0.6
-
 # ==================== 告警配置 ====================
 ALERT_ENABLED = True
 ALERT_SOUND = True  # 是否播放告警声音

@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                                QPushButton, QLabel, QTextEdit, QFileDialog,
                                QTableWidget, QTableWidgetItem, QHeaderView,
                                QGroupBox, QGridLayout, QTabWidget, QInputDialog,
-                               QMessageBox)
+                               QMessageBox, QSlider)
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QImage, QPixmap
 
@@ -67,27 +67,40 @@ class MainWindow(QMainWindow):
         self.count_person.setStyleSheet(count_style.format("#2ecc71"))
         stats_grid.addWidget(self.count_person, 1, 2)
 
-        # 越线计数
-        stats_grid.addWidget(self._make_label("⬆ 上行", label_style), 2, 0)
-        self.count_up = QLabel("0")
-        self.count_up.setAlignment(Qt.AlignCenter)
-        self.count_up.setStyleSheet(count_style.format("#9b59b6"))
-        stats_grid.addWidget(self.count_up, 3, 0)
-
-        stats_grid.addWidget(self._make_label("⬇ 下行", label_style), 2, 1)
-        self.count_down = QLabel("0")
-        self.count_down.setAlignment(Qt.AlignCenter)
-        self.count_down.setStyleSheet(count_style.format("#e74c3c"))
-        stats_grid.addWidget(self.count_down, 3, 1)
-
-        stats_grid.addWidget(self._make_label("📊 总计", label_style), 2, 2)
+        stats_grid.addWidget(self._make_label("📊 总计", label_style), 2, 0)
         self.count_total = QLabel("0")
         self.count_total.setAlignment(Qt.AlignCenter)
         self.count_total.setStyleSheet(count_style.format("#2c3e50"))
-        stats_grid.addWidget(self.count_total, 3, 2)
+        stats_grid.addWidget(self.count_total, 3, 0)
 
         stats_group.setLayout(stats_grid)
         right_panel.addWidget(stats_group)
+
+        # --- 置信度调节 ---
+        conf_group = QGroupBox("🎯 置信度阈值")
+        conf_group.setStyleSheet(
+            "QGroupBox { font-size: 14px; font-weight: bold; color: #333; "
+            "border: 1px solid #dee2e6; border-radius: 6px; margin-top: 8px; padding-top: 16px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 10px; }")
+        conf_layout = QHBoxLayout()
+        self.conf_slider = QSlider(Qt.Horizontal)
+        self.conf_slider.setMinimum(10)
+        self.conf_slider.setMaximum(95)
+        self.conf_slider.setValue(int(config.CONF_VIDEO * 100))
+        self.conf_slider.setTickInterval(5)
+        self.conf_slider.setTickPosition(QSlider.TicksBelow)
+        self.conf_slider.setStyleSheet(
+            "QSlider::groove:horizontal { height: 6px; background: #ddd; border-radius: 3px; }"
+            "QSlider::handle:horizontal { width: 16px; margin: -5px 0; background: #0078D7; border-radius: 8px; }"
+            "QSlider::sub-page:horizontal { background: #0078D7; border-radius: 3px; }")
+        self.conf_label = QLabel(f"{config.CONF_VIDEO:.2f}")
+        self.conf_label.setStyleSheet("font-size: 18px; font-weight: bold; color: #0078D7; min-width: 40px;")
+        self.conf_label.setAlignment(Qt.AlignCenter)
+        self.conf_slider.valueChanged.connect(self._on_conf_changed)
+        conf_layout.addWidget(self.conf_slider)
+        conf_layout.addWidget(self.conf_label)
+        conf_group.setLayout(conf_layout)
+        right_panel.addWidget(conf_group)
 
         # --- 选项卡：明细 / 日志 ---
         self.tabs = QTabWidget()
@@ -219,8 +232,6 @@ class MainWindow(QMainWindow):
         self.count_car.setText(str(stats.get("car", 0)))
         self.count_bicycle.setText(str(stats.get("bicycle", 0)))
         self.count_person.setText(str(stats.get("person", 0)))
-        self.count_up.setText(str(stats.get("line_up", 0)))
-        self.count_down.setText(str(stats.get("line_down", 0)))
         total = stats.get("car", 0) + stats.get("bicycle", 0) + stats.get("person", 0)
         self.count_total.setText(str(total))
 
@@ -296,12 +307,19 @@ class MainWindow(QMainWindow):
         status = "开启" if self.show_heatmap else "关闭"
         self.log_output.append(f"🔥 热力图模式已{status}")
 
+    def _on_conf_changed(self, value):
+        """置信度滑块变化时实时更新"""
+        conf = value / 100.0
+        self.conf_label.setText(f"{conf:.2f}")
+        # 更新当前活动的 processor
+        if self.thread and self.thread.processor:
+            self.thread.processor.conf_threshold = conf
+        self.processor.conf_threshold = conf
+
     def _reset_stats(self):
         self.count_car.setText("0")
         self.count_bicycle.setText("0")
         self.count_person.setText("0")
-        self.count_up.setText("0")
-        self.count_down.setText("0")
         self.count_total.setText("0")
         self.table.setRowCount(0)
 
@@ -311,8 +329,8 @@ class MainWindow(QMainWindow):
             self.log_output.append("\n" + "=" * 40)
             self.log_output.append(f"📋 场次: {s['session']}")
             self.log_output.append(f"   机动车: {s['car']}  非机动车: {s['bicycle']}  行人: {s['person']}")
-            self.log_output.append(f"   越线统计: ⬆上行 {s['line_up']}  ⬇下行 {s['line_down']}")
             self.log_output.append(f"   总计: {s['total']} 个目标  |数据库: {s['db_status']}")
+            self.log_output.append(f"   置信度阈值: {self.conf_slider.value() / 100:.2f}")
             self.log_output.append("=" * 40)
 
     def _auto_export_word(self, processor):
