@@ -1,11 +1,19 @@
 import cv2
 import os
+import io
 import numpy as np
 import mysql.connector
 import pandas as pd
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 from datetime import datetime
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
+from docx import Document
+from docx.shared import Inches, Pt, RGBColor
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
 
 import config
 from ui.alert_manager import AlertManager
@@ -285,6 +293,125 @@ class DetectionProcessor:
             "line_down": self.line_counts["down"],
             "db_status": "已连接" if self.db_connected else "未连接(仅CSV)"
         }
+
+    def generate_word_report(self, save_path=None):
+        """生成 Word 报告：合并检测记录表格 + 统计图表"""
+        if not self.session_records:
+            return None
+
+        doc = Document()
+
+        # ===== 标题 =====
+        title = doc.add_heading('智慧路口视频监控系统 — 检测报告', level=0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run(f'场次: {self.session_name}    生成时间: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}')
+        run.font.size = Pt(11)
+        run.font.color.rgb = RGBColor(100, 100, 100)
+
+        doc.add_paragraph()
+
+        # ===== 一、统计摘要 =====
+        doc.add_heading('一、统计摘要', level=1)
+        summary = self.get_summary()
+        total = summary['total']
+        table_summary = doc.add_table(rows=4, cols=2, style='Light Shading Accent 1')
+        table_summary.alignment = WD_TABLE_ALIGNMENT.CENTER
+        summary_data = [
+            ('检测总数', str(total)),
+            ('机动车 / 非机动车 / 行人', f"{summary['car']} / {summary['bicycle']} / {summary['person']}"),
+            ('越线统计 (上行 / 下行)', f"{summary['line_up']} / {summary['line_down']}"),
+            ('数据库状态', summary['db_status']),
+        ]
+        for i, (key, val) in enumerate(summary_data):
+            table_summary.cell(i, 0).text = key
+            table_summary.cell(i, 1).text = val
+
+        doc.add_paragraph()
+
+        # ===== 二、检测记录明细 =====
+        doc.add_heading('二、检测记录明细', level=1)
+        df = pd.DataFrame(self.session_records)
+        headers = list(df.columns)
+        table = doc.add_table(rows=1, cols=len(headers), style='Light Grid Accent 1')
+        table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+        # 表头
+        for j, h in enumerate(headers):
+            cell = table.rows[0].cells[j]
+            cell.text = h
+            for paragraph in cell.paragraphs:
+                for run in paragraph.runs:
+                    run.bold = True
+                    run.font.size = Pt(9)
+
+        # 表体
+        for _, row in df.iterrows():
+            cells = table.add_row().cells
+            for j, h in enumerate(headers):
+                cells[j].text = str(row[h])
+                for paragraph in cells[j].paragraphs:
+                    for run in paragraph.runs:
+                        run.font.size = Pt(8)
+
+        doc.add_paragraph()
+
+        # ===== 三、数据分析图表 =====
+        doc.add_heading('三、数据分析图表', level=1)
+
+        plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'DejaVu Sans']
+        plt.rcParams['axes.unicode_minus'] = False
+
+        category_counts = df['类别'].value_counts()
+        colors_map = {'car': '#e67e22', 'bicycle': '#3498db', 'person': '#2ecc71'}
+        labels_map = {'car': '机动车', 'bicycle': '非机动车', 'person': '行人'}
+        pie_colors = [colors_map.get(c, '#95a5a6') for c in category_counts.index]
+        pie_labels = [labels_map.get(c, c) for c in category_counts.index]
+
+        # 图1: 饼图
+        fig1, ax1 = plt.subplots(figsize=(5, 4))
+        ax1.pie(category_counts.values, labels=pie_labels, colors=pie_colors,
+                autopct='%1.1f%%', startangle=90, textprops={'fontsize': 11})
+        ax1.set_title('目标类别占比', fontsize=13, fontweight='bold')
+        fig1.tight_layout()
+
+        buf1 = io.BytesIO()
+        fig1.savefig(buf1, format='png', dpi=150)
+        buf1.seek(0)
+        plt.close(fig1)
+
+        p_chart1 = doc.add_paragraph()
+        p_chart1.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_img1 = p_chart1.add_run()
+        run_img1.add_picture(buf1, width=Inches(4.5))
+
+        # 图2: 柱状图
+        fig2, ax2 = plt.subplots(figsize=(5, 4))
+        bars = ax2.bar(pie_labels, category_counts.values, color=pie_colors, edgecolor='white')
+        ax2.set_title('目标数量统计', fontsize=13, fontweight='bold')
+        ax2.set_ylabel('数量')
+        for bar, val in zip(bars, category_counts.values):
+            ax2.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.3,
+                     str(val), ha='center', fontsize=12, fontweight='bold')
+        fig2.tight_layout()
+
+        buf2 = io.BytesIO()
+        fig2.savefig(buf2, format='png', dpi=150)
+        buf2.seek(0)
+        plt.close(fig2)
+
+        p_chart2 = doc.add_paragraph()
+        p_chart2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run_img2 = p_chart2.add_run()
+        run_img2.add_picture(buf2, width=Inches(4.5))
+
+        # ===== 保存 =====
+        if save_path is None:
+            save_path = os.path.join(config.RESULTS_DIR, f"{self.session_name}.docx")
+        doc.save(save_path)
+        return save_path
 
     def get_heatmap_overlay(self, frame):
         """生成热力图叠加层"""

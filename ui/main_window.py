@@ -197,6 +197,7 @@ class MainWindow(QMainWindow):
     def stop_all(self):
         if self.thread:
             self._show_summary(self.thread.processor)
+            self._auto_export_word(self.thread.processor)
             self.thread.stop()
             self.thread = None
             self.video_label.setText("任务已停止")
@@ -238,6 +239,7 @@ class MainWindow(QMainWindow):
         """视频播放结束后自动处理"""
         if self.thread:
             self._show_summary(self.thread.processor)
+            self._auto_export_word(self.thread.processor)
         self.video_label.setText("视频播放完毕")
         self.log_output.append("✅ 视频源已结束，检测已自动停止")
 
@@ -312,6 +314,15 @@ class MainWindow(QMainWindow):
             self.log_output.append(f"   越线统计: ⬆上行 {s['line_up']}  ⬇下行 {s['line_down']}")
             self.log_output.append(f"   总计: {s['total']} 个目标  |数据库: {s['db_status']}")
             self.log_output.append("=" * 40)
+
+    def _auto_export_word(self, processor):
+        """自动导出 Word 报告"""
+        try:
+            path = processor.generate_word_report()
+            if path:
+                self.log_output.append(f"📄 Word 报告已自动生成: {path}")
+        except Exception as e:
+            self.log_output.append(f"⚠ Word 报告生成失败: {e}")
 
     @staticmethod
     def _make_label(text, style):
