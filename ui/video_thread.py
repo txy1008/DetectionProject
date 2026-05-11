@@ -1,3 +1,4 @@
+import time
 import cv2
 import numpy as np
 from PySide6.QtCore import QThread, Signal
@@ -15,12 +16,16 @@ class VideoThread(QThread):
         super().__init__()
         self.source = source
         self.running = True
+        self.paused = False
         self.processor = DetectionProcessor()
 
     def run(self):
         self.processor.start_session()
         cap = cv2.VideoCapture(self.source)
         while self.running:
+            if self.paused:
+                time.sleep(0.05)
+                continue
             ret, frame = cap.read()
             if ret:
                 processed_frame, new_recs = self.processor.process_frame(frame)
@@ -33,6 +38,13 @@ class VideoThread(QThread):
         cap.release()
         self.finished_signal.emit()
 
+    def pause(self):
+        self.paused = True
+
+    def resume(self):
+        self.paused = False
+
     def stop(self):
         self.running = False
+        self.paused = False
         self.wait()

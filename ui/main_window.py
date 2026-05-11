@@ -201,6 +201,14 @@ class MainWindow(QMainWindow):
         self.btn_history.setStyleSheet(btn_toggle_style)
         right_panel.addWidget(self.btn_history)
 
+        self.btn_pause = QPushButton("⏸ 暂停运行")
+        self.btn_pause.setStyleSheet(
+            "QPushButton { padding: 10px; font-size: 14px; "
+            "background-color: #f0ad4e; color: #333; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #ec971f; }")
+        self.btn_pause.setEnabled(False)
+        right_panel.addWidget(self.btn_pause)
+
         self.btn_stop.setStyleSheet(btn_stop_style)
         right_panel.addWidget(self.btn_stop)
 
@@ -211,6 +219,7 @@ class MainWindow(QMainWindow):
         self.btn_video.clicked.connect(self.select_video)
         self.btn_img.clicked.connect(self.select_image)
         self.btn_history.clicked.connect(self.open_history)
+        self.btn_pause.clicked.connect(self.toggle_pause)
         self.btn_stop.clicked.connect(self.stop_all)
 
         self.thread = None
@@ -259,6 +268,8 @@ class MainWindow(QMainWindow):
         self._img_original_frame = None
         self._img_annotated_frame = None
         self._img_detections = []
+        self.btn_pause.setEnabled(True)
+        self.btn_pause.setText("⏸ 暂停运行")
         self.thread = VideoThread(source)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.new_record_signal.connect(self.add_table_record)
@@ -267,12 +278,27 @@ class MainWindow(QMainWindow):
         self.thread.start()
         self.log_output.append(f"✅ 任务已启动，源: {source}")
 
+    def toggle_pause(self):
+        """暂停 / 恢复视频检测"""
+        if not self.thread:
+            return
+        if self.thread.paused:
+            self.thread.resume()
+            self.btn_pause.setText("⏸ 暂停运行")
+            self.log_output.append("▶ 已恢复运行")
+        else:
+            self.thread.pause()
+            self.btn_pause.setText("▶ 恢复运行")
+            self.log_output.append("⏸ 已暂停，画面已冻结")
+
     def stop_all(self):
         if self.thread:
             self._show_summary(self.thread.processor)
             self._auto_export_word(self.thread.processor)
             self.thread.stop()
             self.thread = None
+            self.btn_pause.setEnabled(False)
+            self.btn_pause.setText("⏸ 暂停运行")
             self.video_label.setText("任务已停止")
 
     # ==================== 槽函数 ====================
