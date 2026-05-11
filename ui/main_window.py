@@ -26,14 +26,52 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
         main_layout = QHBoxLayout(main_widget)
 
-        # ========== 左侧：视频显示区 ==========
+        # ========== 左侧：显示区 ==========
         left_panel = QVBoxLayout()
+
+        # 视频模式显示区（单帧）
         self.video_label = QLabel("等待视频源加载...")
         self.video_label.setAlignment(Qt.AlignCenter)
         self.video_label.setStyleSheet("background-color: #000; border-radius: 10px; color: #aaa; font-size: 18px;")
         self.video_label.setMinimumSize(900, 600)
         left_panel.addWidget(self.video_label)
+
+        # 图片对比模式显示区（原图 + 检测图）
+        self.img_compare_widget = QWidget()
+        img_compare_layout = QVBoxLayout(self.img_compare_widget)
+        img_compare_layout.setContentsMargins(0, 0, 0, 0)
+        img_compare_layout.setSpacing(4)
+
+        lbl_orig_title = QLabel("🖼 原图")
+        lbl_orig_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #555; padding: 2px;")
+        lbl_orig_title.setAlignment(Qt.AlignCenter)
+        img_compare_layout.addWidget(lbl_orig_title)
+
+        self.img_original_label = QLabel()
+        self.img_original_label.setAlignment(Qt.AlignCenter)
+        self.img_original_label.setStyleSheet("background-color: #1a1a1a; border-radius: 6px;")
+        self.img_original_label.setMinimumHeight(280)
+        img_compare_layout.addWidget(self.img_original_label)
+
+        self.lbl_detect_title = QLabel("🔍 检测结果（点击表格行可筛选单个目标）")
+        self.lbl_detect_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #555; padding: 2px;")
+        self.lbl_detect_title.setAlignment(Qt.AlignCenter)
+        img_compare_layout.addWidget(self.lbl_detect_title)
+
+        self.img_detect_label = QLabel()
+        self.img_detect_label.setAlignment(Qt.AlignCenter)
+        self.img_detect_label.setStyleSheet("background-color: #1a1a1a; border-radius: 6px;")
+        self.img_detect_label.setMinimumHeight(280)
+        img_compare_layout.addWidget(self.img_detect_label)
+
+        self.img_compare_widget.hide()
+        left_panel.addWidget(self.img_compare_widget)
+
         main_layout.addLayout(left_panel, 7)
+
+        # 图片检测结果缓存（用于点击筛选）
+        self._img_original_frame = None   # 原图 numpy
+        self._img_detections = []          # [{id, box, name, conf, color}, ...]
 
         # ========== 右侧：控制面板 ==========
         right_panel = QVBoxLayout()
@@ -112,6 +150,8 @@ class MainWindow(QMainWindow):
         self.table.setHorizontalHeaderLabels(["ID", "类别", "发现时间", "文件名"])
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.setStyleSheet("background-color: white;")
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.cellClicked.connect(self._on_table_cell_clicked)
         self.tabs.addTab(self.table, "📝 检测明细")
 
         # Tab 2: 系统日志
@@ -189,16 +229,35 @@ class MainWindow(QMainWindow):
         if path:
             self.processor.start_session()
             frame = cv2.imread(path)
+            self._img_original_frame = frame.copy()
+            self._img_detections = []
+
             res_frame, records = self.processor.process_frame(frame, is_image=True)
-            self.update_image(res_frame)
+
+            # 收集每个检测结果的详情（用于点击筛选）
+            if hasattr(self.processor, '_last_image_detections'):
+                self._img_detections = self.processor._last_image_detections
+
+            # 切换到图片对比模式
+            self.video_label.hide()
+            self.img_compare_widget.show()
+            self._show_image_on_label(self._img_original_frame, self.img_original_label)
+            self._show_image_on_label(res_frame, self.img_detect_label)
+            self.lbl_detect_title.setText("🔍 检测结果（点击表格行可筛选单个目标）")
+
             self.add_table_record(records)
             self.update_stats(self.processor.get_stats())
             self._show_summary(self.processor)
-            self.log_output.append(f"单图检测完成: {path}")
+            self.log_output.append(f"单图检测完成: {path}（点击表格行可筛选某个目标）")
 
     def start_task(self, source):
         self.stop_all()
         self._reset_stats()
+        # 切换回视频模式
+        self.img_compare_widget.hide()
+        self.video_label.show()
+        self._img_original_frame = None
+        self._img_detections = []
         self.thread = VideoThread(source)
         self.thread.change_pixmap_signal.connect(self.update_image)
         self.thread.new_record_signal.connect(self.add_table_record)
@@ -316,12 +375,46 @@ class MainWindow(QMainWindow):
             self.thread.processor.conf_threshold = conf
         self.processor.conf_threshold = conf
 
+    def _on_table_cell_clicked(self, row, _col):
+        """点击表格行：图片模式下筛选单个目标"""
+        if self._img_original_frame is None or not self._img_detections:
+            return
+        id_item = self.table.item(row, 0)
+        if id_item is None:
+            return
+        selected_id = id_item.text()
+
+        frame = self._img_original_frame.copy()
+        matched = [d for d in self._img_detections if str(d['id']) == selected_id]
+        if not matched:
+            return
+
+        for d in matched:
+            x1, y1, x2, y2 = [int(v) for v in d['box']]
+            color = d['color']
+            cv2.rectangle(frame, (x1, y1), (x2, y2), color, 2)
+            cv2.putText(frame, f"{d['name']} #{d['id']} {d['conf']:.2f}",
+                        (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+        self._show_image_on_label(frame, self.img_detect_label)
+        self.lbl_detect_title.setText(f"🔍 筛选目标: #{selected_id}（点击其他行切换）")
+        self.log_output.append(f"🔍 已筛选目标 #{selected_id}")
+
+    def _show_image_on_label(self, frame, label):
+        """将 numpy 图片显示到指定 QLabel"""
+        h, w, c = frame.shape
+        q_img = QImage(frame.data, w, h, w * c, QImage.Format_RGB888).rgbSwapped()
+        label.setPixmap(QPixmap.fromImage(q_img).scaled(
+            label.size(), Qt.KeepAspectRatio, Qt.SmoothTransformation))
+
     def _reset_stats(self):
         self.count_car.setText("0")
         self.count_bicycle.setText("0")
         self.count_person.setText("0")
         self.count_total.setText("0")
         self.table.setRowCount(0)
+        self._img_original_frame = None
+        self._img_detections = []
 
     def _show_summary(self, processor):
         s = processor.get_summary()

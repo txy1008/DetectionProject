@@ -104,7 +104,7 @@ class DetectionProcessor:
             self.heatmap_data *= 0.95
 
         # ========== YOLO 检测（不做追踪，追踪交给 DeepSORT） ==========
-        conf_threshold = config.CONF_IMAGE if is_image else self.conf_threshold
+        conf_threshold = self.conf_threshold
         results = self.model(frame, classes=self.target_classes, conf=conf_threshold,
                              iou=config.IOU_THRESHOLD, verbose=False)
 
@@ -118,6 +118,7 @@ class DetectionProcessor:
 
             if is_image:
                 # 单图模式：不追踪
+                self._last_image_detections = []
                 for box, cls, conf in zip(boxes, clss, confs):
                     obj_name = self.class_mapping.get(cls, "unknown")
                     self.heatmap_data[max(0, int(box[1])):min(h, int(box[3])),
@@ -126,14 +127,21 @@ class DetectionProcessor:
                     self.save_count += 1
                     if obj_name in self.counters:
                         self.counters[obj_name] += 1
-                    record = self.save_data(frame, box, "IMG", obj_name, conf, self.save_count)
+                    display_id = self.save_count
+                    record = self.save_data(frame, box, display_id, obj_name, conf, self.save_count)
                     new_records.append(record)
 
                     color_map = {"person": (0, 255, 0), "car": (255, 128, 0), "bicycle": (255, 200, 0)}
                     color = color_map.get(obj_name, (128, 128, 128))
                     cv2.rectangle(annotated_frame, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), color, 2)
-                    cv2.putText(annotated_frame, f"{obj_name} {conf:.2f}",
+                    cv2.putText(annotated_frame, f"{obj_name} #{display_id} {conf:.2f}",
                                 (int(box[0]), int(box[1] - 10)), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+
+                    # 缓存检测详情供 UI 筛选
+                    self._last_image_detections.append({
+                        'id': display_id, 'box': box.tolist(),
+                        'name': obj_name, 'conf': float(conf), 'color': color
+                    })
             else:
                 # ========== 视频模式：DeepSORT 追踪 ==========
                 # 准备 DeepSORT 输入格式: ([left, top, w, h], confidence, class_id)
