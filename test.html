@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>智慧路口视频监控系统</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Microsoft YaHei',sans-serif;background:#101827;color:#cdd6f4;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+  .titlebar{background:#151b2d;padding:9px 18px;font-size:.9rem;color:#4fc3f7;border-bottom:1px solid #2a3555;flex-shrink:0}
+  .main{display:flex;flex:1;overflow:hidden}
+  /* ── left display ── */
+  .left{flex:1;display:flex;flex-direction:column;gap:1px;background:#0a0e1a;min-width:0}
+  .dpanel{flex:1;display:flex;flex-direction:column;min-height:0}
+  .dlabel{background:#151b2d;padding:5px 12px;font-size:.77rem;color:#4fc3f7;flex-shrink:0}
+  .darea{flex:1;overflow:hidden;background:#0a0e1a;position:relative;min-height:0}
+  .darea>img,.darea>video{position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain}
+  .darea>canvas{position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px)}
+  .ph{color:#3a4a5a;font-size:.88rem;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);white-space:nowrap}
+  /* ── right panel ── */
+  .right{width:285px;flex-shrink:0;background:#151b2d;display:flex;flex-direction:column;border-left:1px solid #2a3555;overflow-y:auto}
+  .psec{padding:9px 11px;border-bottom:1px solid #1f2a40}
+  .ptitle{font-size:.7rem;color:#5a6a8a;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px;font-weight:bold}
+  /* stats */
+  .sg{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+  .si{background:#1a2540;border-radius:5px;padding:6px;text-align:center}
+  .si.full{grid-column:1/-1;background:#0f1f40}
+  .sico{font-size:.75rem}.slbl{font-size:.65rem;color:#5a6a8a}
+  .sval{font-size:1.4rem;font-weight:bold;color:#4fc3f7;line-height:1.1}
+  /* slider */
+  .clbl{font-size:.75rem;color:#5a6a8a;display:block;margin-bottom:4px}
+  .srow{display:flex;align-items:center;gap:7px}
+  input[type=range]{flex:1;accent-color:#4fc3f7;height:4px;cursor:pointer}
+  .sv{color:#4fc3f7;font-weight:bold;font-size:.88rem;min-width:30px;text-align:right}
+  /* model select */
+  select{width:100%;background:#1a2540;color:#cdd6f4;border:1px solid #2a3555;border-radius:4px;padding:5px 7px;font-size:.8rem}
+  /* table */
+  .tabbar{margin-bottom:5px;font-size:.75rem}
+  .dtab{color:#4fc3f7;border-bottom:2px solid #4fc3f7;padding:3px 7px;display:inline-block}
+  .tw{max-height:175px;overflow-y:auto}
+  table{width:100%;border-collapse:collapse;font-size:.7rem}
+  th{background:#1a2540;color:#5a6a8a;padding:4px 3px;position:sticky;top:0;text-align:left;font-weight:normal}
+  td{padding:3px;border-bottom:1px solid #1a2540;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:52px}
+  tr:hover td{background:#1a2f50}
+  /* buttons */
+  .bgrp{padding:7px;display:flex;flex-direction:column;gap:4px}
+  .ab{width:100%;padding:9px 13px;border:none;border-radius:4px;cursor:pointer;font-size:.8rem;font-weight:bold;text-align:left;transition:filter .15s}
+  .ab:disabled{filter:opacity(.35);cursor:not-allowed}
+  .ab.b{background:#1565c0;color:#fff}.ab.b:hover:not(:disabled){background:#1e88e5}
+  .ab.g{background:#37474f;color:#fff}.ab.g:hover:not(:disabled){background:#546e7a}
+  .ab.o{background:#e65100;color:#fff}.ab.o:hover:not(:disabled){background:#f4511e}
+  .ab.r{background:#b71c1c;color:#fff}.ab.r:hover:not(:disabled){background:#c62828}
+  .ab.sm{width:auto;padding:6px 16px}
+  /* status bar */
+  .sbar{background:#0f1420;padding:4px 15px;font-size:.75rem;color:#5a6a8a;border-top:1px solid #1f2a40;flex-shrink:0}
+  /* modal */
+  .mbg{position:fixed;inset:0;background:rgba(0,0,0,.78);z-index:999;display:flex;align-items:center;justify-content:center}
+  .mbox{background:#151b2d;border:1px solid #2a3555;border-radius:10px;width:750px;max-height:90vh;overflow:auto;resize:both;min-width:520px;min-height:320px}
+  .crow{display:flex;gap:8px}
+  .cbox{flex:1;min-width:0;height:265px;position:relative}
+  tr.hl td{background:#1565c0!important;color:#fff!important;font-weight:bold}
+  #camSel{margin-top:4px;font-size:.72rem;width:100%}
+  .mhd{display:flex;justify-content:space-between;align-items:center;padding:13px 19px;border-bottom:1px solid #2a3555;color:#4fc3f7;font-weight:bold}
+  .mcls{background:none;border:none;color:#5a6a8a;font-size:1.3rem;cursor:pointer}
+  .mcls:hover{color:#ef5350}
+  .mbody{padding:16px 18px}
+  .mctrl{display:flex;align-items:center;gap:9px;margin-bottom:12px;font-size:.82rem;color:#5a6a8a}
+  .mctrl select{flex:1}
+  .crow{display:flex;gap:8px;justify-content:center}
+  .smry{text-align:center;color:#5a6a8a;font-size:.82rem;margin-top:11px;line-height:2}
+  input[type=file]{display:none}
+  a{color:#81c784}
+</style>
+</head>
+<body>
+
+<div class="titlebar">🎯 智慧路口视频监控系统专业版 (YOLOv8)</div>
+
+<div class="main">
+  <!-- ── 左侧画面 ── -->
+  <div class="left">
+    <div class="dpanel">
+      <div class="dlabel">● 原图</div>
+      <div id="origD" class="darea"><span class="ph">等待视频源加载...</span></div>
+    </div>
+    <div class="dpanel">
+      <div class="dlabel">● 检测结果</div>
+      <div id="resD" class="darea"><span class="ph">等待检测...</span></div>
+    </div>
+  </div>
+
+  <!-- ── 右侧控制 ── -->
+  <div class="right">
+    <div class="psec">
+      <div class="ptitle">📊 实时统计</div>
+      <div class="sg">
+        <div class="si"><div class="sico">🧑</div><div class="slbl">人员</div><div class="sval" id="sm">0</div></div>
+        <div class="si"><div class="sico">🚗</div><div class="slbl">车辆</div><div class="sval" id="sn">0</div></div>
+        <div class="si"><div class="sico">🐾</div><div class="slbl">动物</div><div class="sval" id="sp">0</div></div>
+        <div class="si full"><div class="sico">📋</div><div class="slbl">总计</div><div class="sval" id="st">0</div></div>
+      </div>
+    </div>
+
+    <div class="psec">
+      <label class="clbl">置信度阈值</label>
+      <div class="srow">
+        <input type="range" id="conf" min="0.1" max="1" step="0.05" value="0.3"
+               oninput="document.getElementById('cv').textContent=parseFloat(this.value).toFixed(2)">
+        <span class="sv" id="cv">0.30</span>
+      </div>
+    </div>
+
+    <div class="psec">
+      <label class="clbl">模型选择</label>
+      <select><option>yolov8n.pt</option><option>yolov8s.pt</option><option>yolov8m.pt</option></select>
+    </div>
+
+    <div class="psec" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="tabbar" style="display:flex;justify-content:space-between;align-items:center"><span class="dtab">检测明细</span><button onclick="restoreAll()" style="background:#1a3a5a;border:none;color:#4fc3f7;font-size:.68rem;padding:2px 7px;border-radius:3px;cursor:pointer">&#8617; 恢复全部</button></div>
+      <div class="tw">
+        <table>
+          <thead><tr><th>#</th><th>ID</th><th>类别</th><th>发现时间</th><th>文件名</th></tr></thead>
+          <tbody id="tb"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bgrp">
+      <button class="ab b" onclick="trigImg()">🔍 检测单张图片</button>
+      <button class="ab b" onclick="trigVid()">📹 上传视频检测</button>
+      <button class="ab b" id="camBtn" onclick="togCam()">📷 开启实时摄像头</button>
+      <select id="camSel" title="选择摄像头设备"><option value="">-- 正在加载摄像头列表... --</option></select>
+      <button class="ab g" onclick="openHist()">📊 历史数据分析</button>
+      <button class="ab o" id="pauseBtn" onclick="togPause()" disabled>⏸ 暂停运行</button>
+      <button class="ab r" id="stopBtn"  onclick="stopAll()"  disabled>⏹ 停止运行</button>
+    </div>
+  </div>
+</div>
+
+<div class="sbar" id="sb">就绪 — 等待操作</div>
+
+<input type="file" id="ii" accept="image/*">
+<input type="file" id="vi" accept="video/*">
+
+<!-- 历史分析弹窗 -->
+<div id="hm" class="mbg" style="display:none">
+  <div class="mbox">
+    <div class="mhd"><span>📊 历史数据分析</span><button class="mcls" onclick="closeHist()">×</button></div>
+    <div class="mbody">
+      <div class="mctrl">
+        <label>选择场次：</label>
+        <select id="ss"></select>
+        <button class="ab b sm" onclick="doAna()">📈 分析</button>
+      </div>
+      <div id="ct" style="text-align:center;color:#4fc3f7;margin:7px 0;font-size:.95rem"></div>
+      <div class="crow">
+        <div class="cbox"><canvas id="pc"></canvas></div>
+        <div class="cbox"><canvas id="bc"></canvas></div>
+      </div>
+      <div id="smry" class="smry"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const B   = 'http://127.0.0.1:8000'
+const MC  = ['person']
+const NC  = ['car','truck','bus','motorcycle','bicycle','train','boat','airplane']
+const PC  = ['bird','cat','dog','horse','sheep','cow','elephant','bear','zebra','giraffe']
+const CLR = ['#f48c42','#4fc3f7','#81c784','#ce93d8','#80cbc4','#ffcc80','#ef9a9a']
+
+let ws=null,cs=null,ct=null,paused=false,seen={},pi=null,bi=null
+let idSeq=0,objDisplayId={},highlightId=null
+let lastImgData=null // {origSrc, resultUrl, objects} for image highlight
+
+function ss(m){document.getElementById('sb').textContent=m}
+function gc(){return parseFloat(document.getElementById('conf').value)}
+
+function rst(){
+  document.getElementById('origD').innerHTML='<span class="ph">等待视频源加载...</span>'
+  document.getElementById('resD').innerHTML='<span class="ph">等待检测...</span>'
+  document.getElementById('tb').innerHTML=''
+  seen={}; idSeq=0; objDisplayId={}; highlightId=null; lastImgData=null; uStats([])
+}
+
+function addRow(yoloId,cls,timeStr,fname){
+  if(seen[yoloId])return
+  seen[yoloId]=cls; idSeq++; objDisplayId[yoloId]=idSeq
+  const tb=document.getElementById('tb'),tr=document.createElement('tr')
+  tr.dataset.yoloid=String(yoloId); tr.style.cursor='pointer'
+  tr.setAttribute('onclick','pickRow('+yoloId+')')
+  const oc='pickRow('+yoloId+')'
+  tr.innerHTML=`<td onclick="${oc}">${idSeq}</td><td onclick="${oc}">${idSeq}</td><td onclick="${oc}">${cls}</td><td onclick="${oc}">${timeStr}</td><td onclick="${oc}">${fname||'(实时)'}</td>`
+  tb.insertBefore(tr,tb.firstChild)
+  uStats(Object.values(seen))
+}
+function restoreAll(){
+  highlightId=null
+  document.querySelectorAll('#tb tr').forEach(r=>r.classList.remove('hl'))
+  if(lastImgData){
+    const encUrl=encodeURI(lastImgData.resultUrl)+'?t='+Date.now()
+    document.getElementById('resD').innerHTML=`<img src="${encUrl}">`
+    ss('已恢复显示全部目标')
+  }else{
+    ss('已恢复显示全部目标')
+    forceFrame()
+  }
+}
+function forceFrame(){
+  if(!ws||ws.readyState!==WebSocket.OPEN)return
+  const src=document.getElementById('vidsrc')||document.getElementById('rv')
+  if(!src)return
+  const t=document.createElement('canvas')
+  t.width=src.videoWidth||640;t.height=src.videoHeight||480
+  t.getContext('2d').drawImage(src,0,0,t.width,t.height)
+  ws.send(JSON.stringify({frame:t.toDataURL('image/jpeg',.75).split(',')[1],conf:gc(),highlight_id:highlightId}))
+}
+function pickRow(yoloId){
+  document.querySelectorAll('#tb tr').forEach(r=>r.classList.remove('hl'))
+  const found=document.querySelector('#tb tr[data-yoloid="'+yoloId+'"]')
+  if(found)found.classList.add('hl')
+  highlightId=yoloId
+  ss('🎯 聚焦 ID:'+objDisplayId[yoloId]+' ('+seen[yoloId]+') — 点击 ↩恢复全部 显示所有')
+  forceFrame()
+}
+function showErr(msg){
+  document.getElementById('resD').innerHTML=`<div style="color:#ef5350;padding:20px;font-size:.9rem;text-align:center;">❌ ${msg}<br><span style="color:#5a6a8a;font-size:.78rem">请确认后端服务已启动：.venv/Scripts/uvicorn main:app</span></div>`
+  ss('❌ '+msg)
+}
+
+function uStats(cls){
+  let m=0,n=0,p=0
+  cls.forEach(c=>{if(MC.includes(c))m++;else if(NC.includes(c))n++;else if(PC.includes(c))p++})
+  document.getElementById('sm').textContent=m
+  document.getElementById('sn').textContent=n
+  document.getElementById('sp').textContent=p
+  document.getElementById('st').textContent=cls.length
+}
+
+const CAT_LABEL = {'人员':MC,'车辆':NC,'动物':PC}
+
+function uTable(rows){
+  document.getElementById('tb').innerHTML=[...rows].reverse().map((r,i)=>{
+    const f=(r['存储路径']||r.screenshot_path||'').split(/[\\/]/).pop()
+    const objId=r['ID']||r.obj_id||''
+    return`<tr style="cursor:pointer" data-objid="${objId}" onclick="pickImgRow(${objId})"><td>${rows.length-i}</td><td>${objId}</td><td>${r['类别']||r.class_name||''}</td><td>${r['时间']||r.detect_time||''}</td><td title="${f}">${f||'(实时)'}</td></tr>`
+  }).join('')
+}
+function pickImgRow(objId){
+  if(!lastImgData)return
+  document.querySelectorAll('#tb tr').forEach(r=>r.classList.remove('hl'))
+  const found=document.querySelector('#tb tr[data-objid="'+objId+'"]')
+  if(found)found.classList.add('hl')
+  const img=new Image()
+  img.onload=()=>{
+    const c=document.createElement('canvas')
+    c.width=img.naturalWidth;c.height=img.naturalHeight
+    c.style.cssText='position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain'
+    const ctx=c.getContext('2d')
+    ctx.drawImage(img,0,0)
+    const obj=lastImgData.objects.find(o=>o.id===objId)
+    if(obj&&obj.bbox){
+      const [x1,y1,x2,y2]=obj.bbox
+      ctx.strokeStyle='#00ff00';ctx.lineWidth=3
+      ctx.strokeRect(x1,y1,x2-x1,y2-y1)
+      ctx.fillStyle='#00ff00';ctx.font='bold 18px sans-serif'
+      ctx.fillText('ID:'+obj.id+' '+obj.class_name+' '+obj.confidence,x1,Math.max(y1-8,20))
+    }
+    document.getElementById('resD').innerHTML=''
+    document.getElementById('resD').appendChild(c)
+    ss('🎯 聚焦 ID:'+objId+' ('+(obj?obj.class_name:'')+') — 点击 ↩恢复全部 显示所有')
+  }
+  img.src=lastImgData.origSrc
+}
+
+async function loadRec(name){
+  try{const j=await(await fetch(`${B}/api/records?session_name=${encodeURIComponent(name)}`)).json()
+    if(j.code===200){uTable(j.data);uStats(j.data.map(r=>r.class_name))}}catch(_){}
+}
+
+// ── 图片检测 ──────────────────────────────────────────────────────────────────
+function trigImg(){document.getElementById('ii').click()}
+document.getElementById('ii').addEventListener('change',async function(){
+  const f=this.files[0];if(!f)return;this.value=''
+  stopAll();rst()
+  document.getElementById('origD').innerHTML=`<img src="${URL.createObjectURL(f)}">`
+  document.getElementById('resD').innerHTML='<span class="ph">检测中，请稍候...</span>'
+  ss('🔄 图片检测中...')
+  const fd=new FormData();fd.append('file',f);fd.append('conf',gc())
+  try{
+    const r=await fetch(`${B}/api/detect/image`,{method:'POST',body:fd})
+    const j=await r.json()
+    if(j.code!==200)throw new Error(j.msg||'服务器返回错误 '+r.status)
+    const d=j.data
+    const encUrl=encodeURI(d.result_image_url)+'?t='+Date.now()
+    document.getElementById('resD').innerHTML=`<img src="${encUrl}">`
+    // 保存原图和检测结果，点击表格行时用于重绘单个目标框
+    lastImgData={origSrc:document.querySelector('#origD img').src, resultUrl:d.result_image_url, objects:d.objects||[]}
+    ss(`✅ 检测完成 | 共 ${d.object_count} 个目标 | 会话：${d.session_name}`)
+    await loadRec(d.session_name)
+  }catch(e){showErr(e.message)}
+})
+
+// ── 视频检测（WebSocket 逐帧实时）─────────────────────────────────────────────
+function trigVid(){document.getElementById('vi').click()}
+document.getElementById('vi').addEventListener('change',async function(){
+  const f=this.files[0];if(!f)return;this.value=''
+  stopAll();rst()
+
+  const vidEl=document.createElement('video')
+  vidEl.id='vidsrc';vidEl.muted=true
+  vidEl.style.cssText='position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain'
+  vidEl.src=URL.createObjectURL(f)
+  document.getElementById('origD').innerHTML=''
+  document.getElementById('origD').appendChild(vidEl)
+
+  const cv=document.createElement('canvas')
+  cv.id='ac';cv.style.cssText='position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px)'
+  document.getElementById('resD').innerHTML=''
+  document.getElementById('resD').appendChild(cv)
+
+  await new Promise(r=>{vidEl.onloadedmetadata=r;vidEl.load()})
+  ss('🔄 连接检测服务...')
+
+  ws=new WebSocket('ws://127.0.0.1:8000/ws/camera')
+  ws.onopen=()=>{
+    ss('🎬 视频实时检测中...（可随时暂停）')
+    document.getElementById('camBtn').textContent='⬛ 停止检测'
+    document.getElementById('pauseBtn').disabled=false
+    document.getElementById('stopBtn').disabled=false
+    vidEl.play()
+    sendVideoF(vidEl)
+  }
+  ws.onmessage=e=>{
+    const d=JSON.parse(e.data)
+    const img=new Image(),c=document.getElementById('ac')
+    if(c){img.onload=()=>{c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0)};img.src='data:image/jpeg;base64,'+d.annotated_frame}
+    d.objects.forEach(o=>addRow(o.id,o.class_name,new Date().toTimeString().slice(0,8),'(视频)'))
+    // 流控：收到响应后再发送下一帧，避免积压造成卡顿
+    sendVideoF(vidEl)
+  }
+  ws.onerror=()=>ss('❌ WebSocket 失败，请重启后端服务')
+  ws.onclose=()=>{
+    vidEl.pause()
+    ss('✅ 视频检测完成 | 共检测到 '+Object.keys(seen).length+' 个目标')
+    document.getElementById('camBtn').textContent='📷 开启实时摄像头'
+    document.getElementById('pauseBtn').disabled=true
+    document.getElementById('stopBtn').disabled=true
+  }
+})
+
+function sendVideoF(vid){
+  if(!ws||ws.readyState!==WebSocket.OPEN)return
+  if(vid.ended||vid.paused){if(vid.ended)ws.close();return}
+  if(!paused){
+    const t=document.createElement('canvas')
+    // 限制发送分辨率为640宽，提升速度
+    const scale=Math.min(1,640/(vid.videoWidth||640))
+    t.width=Math.round((vid.videoWidth||640)*scale)
+    t.height=Math.round((vid.videoHeight||480)*scale)
+    t.getContext('2d').drawImage(vid,0,0,t.width,t.height)
+    ws.send(JSON.stringify({frame:t.toDataURL('image/jpeg',.6).split(',')[1],conf:gc(),highlight_id:highlightId}))
+  }
+}
+
+// ── 摄像头检测 ────────────────────────────────────────────────────────────────
+async function togCam(){
+  if(ws&&ws.readyState===WebSocket.OPEN){stopAll();return}
+  rst()
+  try{
+    // 使用下拉选中的摄像头设备（优先精确匹配，失败则使用任意摄像头）
+    const selId=document.getElementById('camSel').value
+    try{
+      cs=await navigator.mediaDevices.getUserMedia({video:selId?{deviceId:{exact:selId}}:{facingMode:'environment'}})
+    }catch(_){
+      cs=await navigator.mediaDevices.getUserMedia({video:true})
+    }
+    const rv=document.createElement('video')
+    rv.id='rv';rv.autoplay=true;rv.muted=true;rv.style.cssText='position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);object-fit:contain'
+    rv.srcObject=cs
+    document.getElementById('origD').innerHTML='';document.getElementById('origD').appendChild(rv)
+    const cv=document.createElement('canvas')
+    cv.id='ac';cv.style.cssText='position:absolute;inset:4px;width:calc(100% - 8px);height:calc(100% - 8px)'
+    document.getElementById('resD').innerHTML='';document.getElementById('resD').appendChild(cv)
+
+    ws=new WebSocket('ws://127.0.0.1:8000/ws/camera')
+    ws.onopen=()=>{
+      ss('📷 摄像头实时检测中...')
+      document.getElementById('camBtn').textContent='📷 关闭摄像头'
+      document.getElementById('pauseBtn').disabled=false
+      document.getElementById('stopBtn').disabled=false
+      sendF()
+    }
+    ws.onmessage=e=>{
+      const d=JSON.parse(e.data)
+      const img=new Image(),c=document.getElementById('ac')
+      if(c){img.onload=()=>{c.width=img.width;c.height=img.height;c.getContext('2d').drawImage(img,0,0)};img.src='data:image/jpeg;base64,'+d.annotated_frame}
+      d.objects.forEach(o=>addRow(o.id,o.class_name,new Date().toTimeString().slice(0,8),'(实时)'))
+    }
+    ws.onerror=()=>ss('❌ WebSocket 失败，请重启后端服务')
+    ws.onclose=()=>{ss('摄像头已停止');document.getElementById('camBtn').textContent='📷 开启实时摄像头';document.getElementById('pauseBtn').disabled=true;document.getElementById('stopBtn').disabled=true}
+  }catch(e){
+    ss('❌ 无法访问摄像头：'+e.message+'（请检查：1.浏览器已允许摄像头权限 2.电脑有物理摄像头 3.摄像头未被其他程序占用）')
+  }
+}
+
+function sendF(){
+  if(!ws||ws.readyState!==WebSocket.OPEN)return
+  if(!paused){
+    const v=document.getElementById('rv')
+    if(v&&v.readyState>=2&&v.videoWidth>0){
+      const t=document.createElement('canvas')
+      t.width=v.videoWidth||640;t.height=v.videoHeight||480
+      t.getContext('2d').drawImage(v,0,0,t.width,t.height)
+      ws.send(JSON.stringify({frame:t.toDataURL('image/jpeg',.7).split(',')[1],conf:gc(),highlight_id:highlightId}))
+    }
+  }
+  ct=setTimeout(sendF,200)
+}
+
+function togPause(){
+  paused=!paused
+  const vid=document.getElementById('vidsrc')
+  if(vid){
+    if(paused)vid.pause()
+    else{vid.play();sendVideoF(vid)}
+  }else if(!paused)sendF()
+  document.getElementById('pauseBtn').textContent=paused?'▶ 继续运行':'⏸ 暂停运行'
+  ss(paused?'⏸ 已暂停':'▶ 继续检测中...')
+}
+
+function stopAll(){
+  clearTimeout(ct)
+  if(ws){ws.close();ws=null}
+  if(cs){cs.getTracks().forEach(t=>t.stop());cs=null}
+  paused=false
+  document.getElementById('camBtn').textContent='📷 开启实时摄像头'
+  document.getElementById('pauseBtn').textContent='⏸ 暂停运行'
+  document.getElementById('pauseBtn').disabled=true
+  document.getElementById('stopBtn').disabled=true
+}
+
+// ── 历史数据分析 ──────────────────────────────────────────────────────────────
+async function openHist(){
+  document.getElementById('hm').style.display='flex'
+  document.getElementById('ss').innerHTML='<option value="">加载中...</option>'
+  try{
+    const r=await fetch(`${B}/api/sessions`)
+    const j=await r.json()
+    if(!j.data||j.data.length===0){
+      document.getElementById('ss').innerHTML='<option value="">暂无历史记录（请先进行一次检测）</option>'
+      return
+    }
+    document.getElementById('ss').innerHTML=j.data.map(s=>`<option value="${s.session_name}">${s.session_name}</option>`).join('')
+  }catch(e){
+    document.getElementById('ss').innerHTML='<option value="">加载失败 — 请确认后端服务已启动</option>'
+    ss('❌ 无法加载会话列表：'+e.message)
+  }
+}
+function closeHist(){document.getElementById('hm').style.display='none'}
+
+async function populateCameras(){
+  try{
+    const tmp=await navigator.mediaDevices.getUserMedia({video:true})
+    tmp.getTracks().forEach(t=>t.stop())
+    const devs=await navigator.mediaDevices.enumerateDevices()
+    const cams=devs.filter(d=>d.kind==='videoinput')
+    const sel=document.getElementById('camSel')
+    if(cams.length===0){sel.innerHTML='<option value="">未检测到摄像头设备</option>';return}
+    sel.innerHTML=cams.map((c,i)=>`<option value="${c.deviceId}">${c.label||'摄像头'+(i+1)}</option>`).join('')
+  }catch(e){document.getElementById('camSel').innerHTML=`<option value="">摄像头不可用(${e.message})</option>`}
+}
+populateCameras()
+
+async function doAna(){
+  const name=document.getElementById('ss').value;if(!name)return
+  try{
+    const j=await(await fetch(`${B}/api/records?session_name=${encodeURIComponent(name)}`)).json()
+    if(j.code!==200)return
+    const recs=j.data
+    document.getElementById('ct').textContent=name
+    const cm={};recs.forEach(r=>{cm[r.class_name]=(cm[r.class_name]||0)+1})
+    const lb=Object.keys(cm),vl=Object.values(cm),cl=lb.map((_,i)=>CLR[i%CLR.length])
+    if(pi)pi.destroy()
+    pi=new Chart(document.getElementById('pc'),{type:'pie',data:{labels:lb,datasets:[{data:vl,backgroundColor:cl}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#cdd6f4',font:{size:10}}},title:{display:true,text:'目标类别占比',color:'#cdd6f4'}}}})
+    if(bi)bi.destroy()
+    bi=new Chart(document.getElementById('bc'),{type:'bar',data:{labels:lb,datasets:[{data:vl,backgroundColor:cl}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},title:{display:true,text:'目标数量统计',color:'#cdd6f4'}},scales:{x:{ticks:{color:'#5a6a8a'},grid:{color:'#1a2540'}},y:{ticks:{color:'#5a6a8a',stepSize:1},grid:{color:'#1a2540'}}}}})
+    const mc=recs.filter(r=>MC.includes(r.class_name)).length
+    const nc=recs.filter(r=>NC.includes(r.class_name)).length
+    const pc=recs.filter(r=>PC.includes(r.class_name)).length
+    document.getElementById('smry').innerHTML=`总检测数：${recs.length} &nbsp;|&nbsp; 🧑 人员：${mc} &nbsp;|&nbsp; 🚗 车辆：${nc} &nbsp;|&nbsp; 🐾 动物：${pc}`
+  }catch(e){ss('❌ '+e.message)}
+}
+</script>
+</body>
+</html>
