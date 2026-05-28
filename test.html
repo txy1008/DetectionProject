@@ -468,6 +468,9 @@ async function populateCameras(){
     const sel=document.getElementById('camSel')
     if(cams.length===0){sel.innerHTML='<option value="">未检测到摄像头设备</option>';return}
     sel.innerHTML=cams.map((c,i)=>`<option value="${c.deviceId}">${c.label||'摄像头'+(i+1)}</option>`).join('')
+    // 优先选择物理摄像头（跳过 iVCam / virtual 等虚拟摄像头）
+    const realIdx=cams.findIndex(c=>!/(ivcam|virtual|obs|manycam|snap)/i.test(c.label))
+    if(realIdx>=0)sel.selectedIndex=realIdx
   }catch(e){document.getElementById('camSel').innerHTML=`<option value="">摄像头不可用(${e.message})</option>`}
 }
 populateCameras()
