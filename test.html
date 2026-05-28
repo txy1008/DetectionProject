@@ -158,6 +158,9 @@
         <div class="cbox"><canvas id="bc"></canvas></div>
       </div>
       <div id="smry" class="smry"></div>
+      <div style="text-align:center;margin-top:12px">
+        <button onclick="exportReport()" style="background:#2e7d32;color:#fff;border:none;padding:10px 32px;border-radius:6px;font-size:.95rem;cursor:pointer;letter-spacing:1px">📄 导出 Word 检测报告</button>
+      </div>
     </div>
   </div>
 </div>
@@ -493,6 +496,23 @@ async function doAna(){
     const pc=recs.filter(r=>PC.includes(r.class_name)).length
     document.getElementById('smry').innerHTML=`总检测数：${recs.length} &nbsp;|&nbsp; 🧑 人员：${mc} &nbsp;|&nbsp; 🚗 车辆：${nc} &nbsp;|&nbsp; 🐾 动物：${pc}`
   }catch(e){ss('❌ '+e.message)}
+}
+
+async function exportReport(){
+  const name=document.getElementById('ss').value
+  if(!name){ss('⚠ 请先选择一个场次');return}
+  ss('📄 正在生成 Word 报告...')
+  try{
+    const r=await fetch(`${B}/api/report/export?session_name=${encodeURIComponent(name)}`)
+    if(!r.ok){const j=await r.json();throw new Error(j.msg||'导出失败')}
+    const blob=await r.blob()
+    const a=document.createElement('a')
+    a.href=URL.createObjectURL(blob)
+    a.download=name+'.docx'
+    a.click()
+    URL.revokeObjectURL(a.href)
+    ss('✅ 报告已导出：'+name+'.docx')
+  }catch(e){ss('❌ 导出失败：'+e.message)}
 }
 </script>
 </body>

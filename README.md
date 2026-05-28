@@ -13,9 +13,10 @@ DetectionProject/
 ├── router.py         # 所有 API 接口定义
 ├── processor.py      # YOLO 模型加载 & 检测/跟踪核心逻辑
 ├── database.py       # SQLAlchemy 数据库模型与增删改查
+├── report.py         # Word 检测报告生成（导出 .docx）
 ├── yolov8n.pt        # YOLOv8 预训练权重（也可放在 models/ 目录下）
 ├── captures/         # 检测截图输出目录（按会话/类别分文件夹）
-├── results/          # CSV 报告输出目录
+├── results/          # CSV 报告 & Word 报告输出目录
 ├── uploads/          # 临时上传文件目录
 └── models/           # 模型存放目录（可选）
 ```
@@ -37,11 +38,13 @@ DetectionProject/
 | `sqlalchemy` | ORM 数据库操作 |
 | `pymysql` | MySQL 驱动 |
 | `python-multipart` | FastAPI 文件上传支持 |
+| `python-docx` | Word 文档生成 |
+| `matplotlib` | 图表绘制（报告中的饼图/柱状图） |
 
 安装全部依赖：
 
 ```bash
-pip install fastapi uvicorn ultralytics opencv-python numpy sqlalchemy pymysql python-multipart
+pip install fastapi uvicorn ultralytics opencv-python numpy sqlalchemy pymysql python-multipart python-docx matplotlib
 ```
 
 ## ⚙️ 配置说明
@@ -183,7 +186,25 @@ GET /api/sessions
 }
 ```
 
-### 5. 检测记录查询
+### 5. 导出 Word 检测报告
+
+```
+GET /api/report/export?session_name=报告_20260528_第1次
+```
+
+| 参数 | 类型 | 必填 | 说明 |
+|---|---|---|---|
+| `session_name` | string | ✅ | 要导出的会话名 |
+
+**返回**：直接下载 `.docx` 文件（Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document）
+
+**报告内容**：
+- 报告信息（时间、模型、检测依据）
+- 检测结果汇总（总数 + 人员/车辆/动物分类统计）
+- 数据分析图表（饼图 + 柱状图）
+- 检测明细记录表格（完整 CSV 数据）
+
+### 6. 检测记录查询
 
 ```
 GET /api/records?session_name=报告_20260528_第1次&class_name=person
@@ -230,7 +251,8 @@ captures/
         └── car_ID3_No1_130046.jpg
 
 results/
-└── 报告_20260528_第1次.csv        # CSV 报告
+├── 报告_20260528_第1次.csv        # CSV 报告
+└── 报告_20260528_第1次.docx       # Word 检测报告（导出时生成）
 ```
 
 **CSV 列说明**：

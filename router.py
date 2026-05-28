@@ -8,6 +8,7 @@ router.py — 所有 API 接口定义
   WS     /ws/camera           摄像头实时检测
   GET    /api/sessions        历史会话列表
   GET    /api/records         检测记录查询（支持过滤）
+  GET    /api/report/export   导出 Word 检测报告
 """
 
 import os
@@ -18,7 +19,7 @@ import base64
 import cv2
 import numpy as np
 from fastapi import APIRouter, File, Form, UploadFile, WebSocket, WebSocketDisconnect
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -28,6 +29,7 @@ from processor import (
     get_session_name, save_csv,
 )
 from database import db_save_records, db_get_sessions, db_get_records
+from report import generate_report
 
 router = APIRouter()
 
@@ -215,3 +217,28 @@ async def get_records(session_name: str = None, class_name: str = None):
     """
     records = db_get_records(session_name=session_name, class_name=class_name)
     return JSONResponse(content={"code": 200, "total": len(records), "data": records})
+
+
+# ── 导出检测报告 ──────────────────────────────────────────────────────────────
+
+@router.get("/api/report/export")
+async def export_report(session_name: str):
+    """
+    导出 Word 检测报告
+    请求参数：
+      - session_name : 会话名，如 报告_20260526_第1次
+    返回：
+      - .docx 文件下载
+    """
+    try:
+        docx_path = await run_in_threadpool(generate_report, session_name)
+        filename = os.path.basename(docx_path)
+        return FileResponse(
+            path=docx_path,
+            filename=filename,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    except ValueError as e:
+        return JSONResponse(status_code=404, content={"code": 404, "msg": str(e)})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"code": 500, "msg": str(e)})
