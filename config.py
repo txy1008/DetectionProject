@@ -8,6 +8,7 @@ CAPTURES_DIR = os.path.join(BASE_DIR, "captures")   # 截图存放根目录
 RESULTS_DIR  = os.path.join(BASE_DIR, "results")    # CSV 和标注结果存放目录
 UPLOADS_DIR  = os.path.join(BASE_DIR, "uploads")    # 临时上传目录
 MODELS_DIR   = os.path.join(BASE_DIR, "models")     # 模型存放目录
+VIDEOS_DIR   = os.path.join(RESULTS_DIR, "videos")  # 导出视频存放目录
 
 # ── 模型路径（优先 models/ 目录，找不到则用根目录）────────────────────────────
 _candidates = [
@@ -31,5 +32,5 @@ DEFAULT_CONF = 0.3           # 默认置信度阈值
 TRACKER      = "botsort.yaml"  # 追踪算法配置文件
 
 # ── 自动创建所有必要目录 ──────────────────────────────────────────────────────
-for _d in [CAPTURES_DIR, RESULTS_DIR, UPLOADS_DIR, MODELS_DIR]:
+for _d in [CAPTURES_DIR, RESULTS_DIR, UPLOADS_DIR, MODELS_DIR, VIDEOS_DIR]:
     os.makedirs(_d, exist_ok=True)

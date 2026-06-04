@@ -33,9 +33,9 @@ if _CN_FONT:
 plt.rcParams["axes.unicode_minus"] = False
 
 # 类别映射
-MC = ["person"]
-NC = ["car", "truck", "bus", "motorcycle", "bicycle", "train", "boat", "airplane"]
-PC = ["bird", "cat", "dog", "horse", "sheep", "cow", "elephant", "bear", "zebra", "giraffe"]
+MC = ["person"]   # 人员
+NC = ["car"]      # 机动车
+BC = ["bicycle"]  # 非机动车
 CLR = ["#f48c42", "#4fc3f7", "#81c784", "#ce93d8", "#80cbc4", "#ffcc80", "#ef9a9a"]
 
 
@@ -43,9 +43,9 @@ def _cat(cls_name: str) -> str:
     if cls_name in MC:
         return "人员"
     elif cls_name in NC:
-        return "车辆"
-    elif cls_name in PC:
-        return "动物"
+        return "机动车"
+    elif cls_name in BC:
+        return "非机动车"
     return "其他"
 
 
@@ -138,7 +138,7 @@ def generate_report(session_name: str) -> str:
     total = len(records)
     m_cnt = sum(1 for r in records if r["class_name"] in MC)
     n_cnt = sum(1 for r in records if r["class_name"] in NC)
-    p_cnt = sum(1 for r in records if r["class_name"] in PC)
+    b_cnt = sum(1 for r in records if r["class_name"] in BC)
 
     summary_p = doc.add_paragraph()
     summary_p.add_run(f"本次检测共发现 ").font.size = Pt(11)
@@ -150,10 +150,8 @@ def generate_report(session_name: str) -> str:
 
     cat_tbl = doc.add_table(rows=1, cols=4, style="Light Grid Accent 1")
     cat_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-    for i, (cat, cnt) in enumerate([("类别", "数量"), ("🧑 人员", m_cnt), ("🚗 车辆", n_cnt), ("🐾 动物", p_cnt)]):
-        pass
-    headers = ["类别", "人员 (person)", "车辆 (car/truck/bus…)", "动物 (dog/cat/bird…)"]
-    values = ["数量", str(m_cnt), str(n_cnt), str(p_cnt)]
+    headers = ["类别", "人员 (person)", "机动车 (car)", "非机动车 (bicycle)"]
+    values = ["数量", str(m_cnt), str(n_cnt), str(b_cnt)]
     for i, h in enumerate(headers):
         _set_cell(cat_tbl.rows[0].cells[i], h, bold=True)
     row = cat_tbl.add_row()

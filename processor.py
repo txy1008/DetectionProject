@@ -83,7 +83,7 @@ def process_image(img: np.ndarray, conf: float) -> dict:
     session_name = get_session_name()
     os.makedirs(os.path.join(CAPTURES_DIR, session_name), exist_ok=True)
 
-    results = model.predict(source=img, conf=conf, verbose=False)
+    results = model.predict(source=img, conf=conf, classes=[0, 1, 2], verbose=False)
     result  = results[0]
 
     class_counters  = {}   # 各类别在本次检测中的出现序号
@@ -163,7 +163,7 @@ def process_video(input_path: str, conf: float) -> dict:
             break
 
         results = model.track(frame, persist=True, tracker=TRACKER,
-                               conf=conf, verbose=False)
+                               conf=conf, classes=[0, 1, 2], verbose=False)
         result  = results[0]
         out.write(result.plot())
 
@@ -214,7 +214,7 @@ def process_camera_frame(frame: np.ndarray, conf: float, session_name: str,
     返回字典：objects, annotated_frame (base64 JPEG), total_unique, new_record
     """
     results = model.track(frame, persist=True, tracker=TRACKER,
-                           conf=conf, verbose=False)
+                           conf=conf, classes=[0, 1, 2], verbose=False)
     result  = results[0]
 
     detected   = []

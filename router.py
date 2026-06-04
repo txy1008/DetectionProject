@@ -9,6 +9,7 @@ router.py — 所有 API 接口定义
   GET    /api/sessions        历史会话列表
   GET    /api/records         检测记录查询（支持过滤）
   GET    /api/report/export   导出 Word 检测报告
+  GET    /api/video/export    导出检测视频
 """
 
 import os
@@ -23,7 +24,7 @@ from fastapi.responses import JSONResponse, FileResponse
 
 from fastapi.concurrency import run_in_threadpool
 
-from config import CAPTURES_DIR, RESULTS_DIR, UPLOADS_DIR, BASE_URL
+from config import CAPTURES_DIR, RESULTS_DIR, UPLOADS_DIR, BASE_URL, VIDEOS_DIR
 from processor import (
     process_image, process_video, process_camera_frame,
     get_session_name, save_csv,
@@ -240,5 +241,42 @@ async def export_report(session_name: str):
         )
     except ValueError as e:
         return JSONResponse(status_code=404, content={"code": 404, "msg": str(e)})
+    except Exception as e:
+        return JSONResponse(status_code=500, content={"code": 500, "msg": str(e)})
+
+
+@router.get("/api/video/export")
+async def export_video(session_name: str):
+    """
+    导出检测后的视频
+    请求参数：
+      - session_name : 会话名，如 报告_20260526_第1次
+    返回：
+      - .mp4 视频文件下载
+    """
+    try:
+        session_cap_dir = os.path.join(CAPTURES_DIR, session_name)
+        if not os.path.exists(session_cap_dir):
+            return JSONResponse(status_code=404, content={"code": 404, "msg": f"会话 '{session_name}' 不存在"})
+
+        # 查找会话目录下的 tracked_*.mp4 文件
+        video_files = [f for f in os.listdir(session_cap_dir) if f.startswith("tracked_") and f.endswith(".mp4")]
+        if not video_files:
+            return JSONResponse(status_code=404, content={"code": 404, "msg": f"会话 '{session_name}' 没有检测视频"})
+
+        # 复制视频到 results/videos/ 目录
+        source_video = os.path.join(session_cap_dir, video_files[0])
+        video_filename = f"{session_name}_{video_files[0]}"
+        dest_video = os.path.join(VIDEOS_DIR, video_filename)
+
+        # 使用 shutil 复制文件
+        import shutil
+        shutil.copy2(source_video, dest_video)
+
+        return FileResponse(
+            path=dest_video,
+            filename=video_filename,
+            media_type="video/mp4",
+        )
     except Exception as e:
         return JSONResponse(status_code=500, content={"code": 500, "msg": str(e)})

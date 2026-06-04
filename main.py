@@ -7,6 +7,8 @@ POST  /api/detect/video   → 视频检测
 WS    /ws/camera          → 摄像头实时
 GET   /api/sessions       → 历史会话列表
 GET   /api/records        → 检测记录查询（可按会话/类别过滤）
+GET   /api/report/export  → 导出 Word 检测报告
+GET   /api/video/export   → 导出检测视频
 """
 
 from fastapi import FastAPI
