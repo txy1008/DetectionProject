@@ -4,6 +4,7 @@ import io
 import numpy as np
 import mysql.connector
 import pandas as pd
+import torch
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -21,6 +22,8 @@ import config
 class DetectionProcessor:
     def __init__(self):
         self.model = YOLO(config.MODEL_PATH)
+        self.device = config.YOLO_DEVICE if torch.cuda.is_available() else "cpu"
+        self.model.to(self.device)
         self.confirmed_ids = set()
         self.id_buffer = {}
         self.session_records = []
@@ -30,10 +33,11 @@ class DetectionProcessor:
         self.db_connected = True
 
         self.db_config = config.DB_CONFIG
-        self.class_mapping = config.CLASS_MAPPING
-        self.target_classes = config.TARGET_CLASSES
+        self.class_mapping = self._build_class_mapping()
+        self.target_classes = list(self.class_mapping.keys())
         self.session_name = ""
         self.session_path = ""
+        self.session_user = "default"
 
         # DeepSORT 追踪器
         self.tracker = self._create_tracker()
@@ -59,18 +63,58 @@ class DetectionProcessor:
             embedder_gpu=config.DEEPSORT_EMBEDDER_GPU
         )
 
-    def start_session(self):
-        """初始化新场次"""
-        today = datetime.now().strftime("%Y%m%d")
-        os.makedirs(config.RESULTS_DIR, exist_ok=True)
-        os.makedirs(config.CAPTURES_DIR, exist_ok=True)
+    def _build_class_mapping(self):
+        mapping = {}
+        aliases = {
+            "person": "person",
+            "pedestrian": "person",
+            "car": "car",
+            "bus": "car",
+            "truck": "car",
+            "bicycle": "bicycle",
+            "motorcycle": "bicycle",
+            "motorbike": "bicycle",
+            "bike": "bicycle",
+        }
+        for cls_id, name in self.model.names.items():
+            key = str(name).lower().strip()
+            if key in aliases:
+                mapping[int(cls_id)] = aliases[key]
+        return mapping or config.CLASS_MAPPING
 
-        existing_reports = [f for f in os.listdir(config.RESULTS_DIR)
-                            if f.startswith(f"报告_{today}") and f.endswith(".docx")]
+    def change_model(self, new_model_path):
+        """动态切换YOLO模型"""
+        try:
+            print(f"正在加载新模型: {new_model_path}")
+            self.model = YOLO(new_model_path)
+            self.device = config.YOLO_DEVICE if torch.cuda.is_available() else "cpu"
+            self.model.to(self.device)
+            self.class_mapping = self._build_class_mapping()
+            self.target_classes = list(self.class_mapping.keys())
+            # 同步更新 config.MODEL_PATH
+            config.MODEL_PATH = new_model_path
+            return True
+        except Exception as e:
+            print(f"模型加载失败: {e}")
+            return False
+
+    def start_session(self, username: str = "default"):
+        """初始化新场次"""
+        self.session_user = username
+        today = datetime.now().strftime("%Y%m%d")
+        
+        user_results_dir = os.path.join(config.RESULTS_DIR, username)
+        user_captures_dir = os.path.join(config.CAPTURES_DIR, username)
+        
+        os.makedirs(user_results_dir, exist_ok=True)
+        os.makedirs(user_captures_dir, exist_ok=True)
+
+        existing_reports = [f for f in os.listdir(user_results_dir)
+                            if f.startswith(f"报告_{today}") and f.endswith(".csv")]
         run_index = len(existing_reports) + 1
 
         self.session_name = f"报告_{today}_第{run_index}次"
-        self.session_path = os.path.abspath(f"{config.CAPTURES_DIR}/{self.session_name}")
+        self.session_path = os.path.abspath(f"{user_captures_dir}/{self.session_name}")
         os.makedirs(self.session_path, exist_ok=True)
 
         self.confirmed_ids.clear()
@@ -82,6 +126,9 @@ class DetectionProcessor:
         self.speed_estimates.clear()
         self.tracker = self._create_tracker()  # 重置 DeepSORT 追踪器
         self.db_connected = True
+        
+        pd.DataFrame(columns=["ID", "类别", "时间", "存储路径"]).to_csv(
+            os.path.join(user_results_dir, f"{self.session_name}.csv"), index=False, encoding='utf-8-sig')
         return self.session_name
 
     def process_frame(self, frame, is_image=False):
@@ -91,6 +138,7 @@ class DetectionProcessor:
         # ========== YOLO 检测（不做追踪，追踪交给 DeepSORT） ==========
         conf_threshold = self.conf_threshold
         results = self.model(frame, classes=self.target_classes, conf=conf_threshold,
+                             device=self.device,
                              iou=config.IOU_THRESHOLD, verbose=False)
 
         annotated_frame = frame.copy()
@@ -134,8 +182,13 @@ class DetectionProcessor:
                     bw, bh = x2 - x1, y2 - y1
                     raw_detections.append(([x1, y1, bw, bh], float(conf), int(cls)))
 
-                # DeepSORT 更新（传入原图用于提取外观特征）
-                tracks = self.tracker.update_tracks(raw_detections, frame=frame)
+                # DeepSORT 更新（传入原图用于提取外观特征），加入异常保护以防特征维数冲突崩溃
+                try:
+                    tracks = self.tracker.update_tracks(raw_detections, frame=frame)
+                except Exception as e:
+                    print(f"DeepSORT tracking conflict detected ({e}), resetting tracker gracefully to prevent crash.")
+                    self.tracker = self._create_tracker()
+                    tracks = []
 
                 for track in tracks:
                     # 只处理当前帧匹配到的轨迹，过滤掉“幽灵”轨迹
@@ -219,8 +272,21 @@ class DetectionProcessor:
 
         rec = {"ID": display_id, "类别": obj_name, "时间": now.strftime("%H:%M:%S"), "存储路径": full_path}
         self.session_records.append(rec)
+        user_results_dir = os.path.join(config.RESULTS_DIR, self.session_user)
+        os.makedirs(user_results_dir, exist_ok=True)
+        pd.DataFrame(self.session_records).to_csv(
+            os.path.join(user_results_dir, f"{self.session_name}.csv"), index=False, encoding='utf-8-sig')
 
-        return {"id": display_id, "type": obj_name, "time": rec["时间"], "img": img_name}
+        return {
+            "id": display_id,
+            "type": obj_name,
+            "category": obj_name,
+            "confidence": float(conf),
+            "time": rec["时间"],
+            "img": img_name,
+            "path": full_path,
+            "box": [float(x1), float(y1), float(x2), float(y2)]
+        }
 
     def get_stats(self):
         """返回当前场次的实时统计数据"""
@@ -246,7 +312,7 @@ class DetectionProcessor:
         doc = Document()
 
         # ===== 标题 =====
-        title = doc.add_heading('智慧路口视频监控系统 — 检测报告', level=0)
+        title = doc.add_heading('检测报告', level=0)
         title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         p = doc.add_paragraph()
@@ -355,4 +421,3 @@ class DetectionProcessor:
             save_path = os.path.join(config.RESULTS_DIR, f"{self.session_name}.docx")
         doc.save(save_path)
         return save_path
-

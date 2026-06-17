@@ -48,3 +48,8 @@ class VideoThread(QThread):
         self.running = False
         self.paused = False
         self.wait()
+
+    def update_model(self, model_path):
+        """接收UI指令，更新处理器中的模型"""
+        if hasattr(self, 'processor'):
+            self.processor.change_model(model_path)

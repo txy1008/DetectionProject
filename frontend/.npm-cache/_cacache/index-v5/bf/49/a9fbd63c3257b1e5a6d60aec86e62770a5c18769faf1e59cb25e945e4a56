@@ -1,0 +1,2 @@
+
+73f6e5eb4ae9f227217179f319e661011bd43522	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/lightningcss","integrity":null,"time":1779714000893,"size":"262","metadata":{"time":1779714000893,"url":"http://registry.npm.taobao.org/lightningcss","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:00 GMT","location":"https://registry.npmmirror.com/lightningcss"},"options":{"compress":true},"status":301}}

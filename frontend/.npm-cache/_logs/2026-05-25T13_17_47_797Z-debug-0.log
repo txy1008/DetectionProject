@@ -1,0 +1,281 @@
+0 verbose cli C:\Program Files\nodejs\node.exe C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js
+1 info using npm@11.6.1
+2 info using node@v24.11.0
+3 silly config load:file:C:\Program Files\nodejs\node_modules\npm\npmrc
+4 silly config load:file:C:\PyTorch_Project\VisionProject\frontend\.npmrc
+5 silly config load:file:C:\Users\30781\.npmrc
+6 silly config load:file:C:\Program Files\nodeJs\node_global\etc\npmrc
+7 verbose title npm install
+8 verbose argv "install" "--cache" ".\\.npm-cache"
+9 verbose logfile logs-max:10 dir:C:\PyTorch_Project\VisionProject\frontend\.npm-cache\_logs\2026-05-25T13_17_47_797Z-
+10 verbose logfile C:\PyTorch_Project\VisionProject\frontend\.npm-cache\_logs\2026-05-25T13_17_47_797Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 silly idealTree buildDeps
+14 silly fetch manifest echarts@^5.5.1
+15 silly packumentCache full:http://registry.npm.taobao.org/echarts cache-miss
+16 http fetch GET 200 https://registry.npmmirror.com/echarts 34214ms (cache miss)
+17 silly packumentCache full:http://registry.npm.taobao.org/echarts set size:63533 disposed:false
+18 silly placeDep ROOT echarts@5.6.0 OK for: smart-intersection-frontend@0.1.0 want: ^5.5.1
+19 silly fetch manifest tslib@2.3.0
+20 silly packumentCache full:http://registry.npm.taobao.org/tslib cache-miss
+21 silly fetch manifest zrender@5.6.1
+22 silly packumentCache full:http://registry.npm.taobao.org/zrender cache-miss
+23 http fetch GET 200 https://registry.npmmirror.com/tslib 783ms (cache miss)
+24 silly packumentCache full:http://registry.npm.taobao.org/tslib set size:33171 disposed:false
+25 http fetch GET 200 https://registry.npmmirror.com/zrender 7083ms (cache miss)
+26 silly packumentCache full:http://registry.npm.taobao.org/zrender set size:34218 disposed:false
+27 silly placeDep ROOT tslib@2.3.0 OK for: echarts@5.6.0 want: 2.3.0
+28 silly placeDep ROOT zrender@5.6.1 OK for: echarts@5.6.0 want: 5.6.1
+29 silly reify moves {}
+30 silly audit bulk request {
+30 silly audit   '@alloc/quick-lru': [ '5.2.0' ],
+30 silly audit   '@babel/helper-string-parser': [ '7.29.7' ],
+30 silly audit   '@babel/helper-validator-identifier': [ '7.29.7' ],
+30 silly audit   '@babel/parser': [ '7.29.7' ],
+30 silly audit   '@babel/types': [ '7.29.7' ],
+30 silly audit   '@ctrl/tinycolor': [ '4.2.0' ],
+30 silly audit   '@element-plus/icons-vue': [ '2.3.2' ],
+30 silly audit   '@esbuild/aix-ppc64': [ '0.21.5' ],
+30 silly audit   '@esbuild/android-arm': [ '0.21.5' ],
+30 silly audit   '@esbuild/android-arm64': [ '0.21.5' ],
+30 silly audit   '@esbuild/android-x64': [ '0.21.5' ],
+30 silly audit   '@esbuild/darwin-arm64': [ '0.21.5' ],
+30 silly audit   '@esbuild/darwin-x64': [ '0.21.5' ],
+30 silly audit   '@esbuild/freebsd-arm64': [ '0.21.5' ],
+30 silly audit   '@esbuild/freebsd-x64': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-arm': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-arm64': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-ia32': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-loong64': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-mips64el': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-ppc64': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-riscv64': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-s390x': [ '0.21.5' ],
+30 silly audit   '@esbuild/linux-x64': [ '0.21.5' ],
+30 silly audit   '@esbuild/netbsd-x64': [ '0.21.5' ],
+30 silly audit   '@esbuild/openbsd-x64': [ '0.21.5' ],
+30 silly audit   '@esbuild/sunos-x64': [ '0.21.5' ],
+30 silly audit   '@esbuild/win32-arm64': [ '0.21.5' ],
+30 silly audit   '@esbuild/win32-ia32': [ '0.21.5' ],
+30 silly audit   '@esbuild/win32-x64': [ '0.21.5' ],
+30 silly audit   '@floating-ui/core': [ '1.7.5' ],
+30 silly audit   '@floating-ui/dom': [ '1.7.6' ],
+30 silly audit   '@floating-ui/utils': [ '0.2.11' ],
+30 silly audit   '@jridgewell/gen-mapping': [ '0.3.13' ],
+30 silly audit   '@jridgewell/resolve-uri': [ '3.1.2' ],
+30 silly audit   '@jridgewell/sourcemap-codec': [ '1.5.5' ],
+30 silly audit   '@jridgewell/trace-mapping': [ '0.3.31' ],
+30 silly audit   '@nodelib/fs.scandir': [ '2.1.5' ],
+30 silly audit   '@nodelib/fs.stat': [ '2.0.5' ],
+30 silly audit   '@nodelib/fs.walk': [ '1.2.8' ],
+30 silly audit   '@sxzz/popperjs-es': [ '2.11.8' ],
+30 silly audit   '@rollup/rollup-android-arm-eabi': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-android-arm64': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-darwin-arm64': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-darwin-x64': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-freebsd-arm64': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-freebsd-x64': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-arm-gnueabihf': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-arm-musleabihf': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-arm64-gnu': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-arm64-musl': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-loong64-gnu': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-loong64-musl': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-ppc64-gnu': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-ppc64-musl': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-riscv64-gnu': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-riscv64-musl': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-s390x-gnu': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-x64-gnu': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-linux-x64-musl': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-openbsd-x64': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-openharmony-arm64': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-win32-arm64-msvc': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-win32-ia32-msvc': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-win32-x64-gnu': [ '4.60.4' ],
+30 silly audit   '@rollup/rollup-win32-x64-msvc': [ '4.60.4' ],
+30 silly audit   '@types/estree': [ '1.0.8' ],
+30 silly audit   '@types/lodash': [ '4.17.24' ],
+30 silly audit   '@types/lodash-es': [ '4.17.12' ],
+30 silly audit   '@types/web-bluetooth': [ '0.0.21' ],
+30 silly audit   '@vitejs/plugin-vue': [ '5.2.4' ],
+30 silly audit   '@vue/compiler-core': [ '3.5.34' ],
+30 silly audit   '@vue/compiler-dom': [ '3.5.34' ],
+30 silly audit   '@vue/compiler-sfc': [ '3.5.34' ],
+30 silly audit   '@vue/compiler-ssr': [ '3.5.34' ],
+30 silly audit   '@vue/devtools-api': [ '6.6.4' ],
+30 silly audit   '@vue/reactivity': [ '3.5.34' ],
+30 silly audit   '@vue/runtime-core': [ '3.5.34' ],
+30 silly audit   '@vue/runtime-dom': [ '3.5.34' ],
+30 silly audit   '@vue/server-renderer': [ '3.5.34' ],
+30 silly audit   '@vue/shared': [ '3.5.34' ],
+30 silly audit   '@vueuse/core': [ '14.3.0' ],
+30 silly audit   '@vueuse/metadata': [ '14.3.0' ],
+30 silly audit   '@vueuse/shared': [ '14.3.0' ],
+30 silly audit   'agent-base': [ '6.0.2' ],
+30 silly audit   'any-promise': [ '1.3.0' ],
+30 silly audit   anymatch: [ '3.1.3' ],
+30 silly audit   arg: [ '5.0.2' ],
+30 silly audit   'async-validator': [ '4.2.5' ],
+30 silly audit   asynckit: [ '0.4.0' ],
+30 silly audit   autoprefixer: [ '10.5.0' ],
+30 silly audit   axios: [ '1.16.1' ],
+30 silly audit   'baseline-browser-mapping': [ '2.10.32' ],
+30 silly audit   'binary-extensions': [ '2.3.0' ],
+30 silly audit   braces: [ '3.0.3' ],
+30 silly audit   browserslist: [ '4.28.2' ],
+30 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+30 silly audit   'camelcase-css': [ '2.0.1' ],
+30 silly audit   'caniuse-lite': [ '1.0.30001793' ],
+30 silly audit   chokidar: [ '3.6.0' ],
+30 silly audit   'glob-parent': [ '5.1.2', '6.0.2' ],
+30 silly audit   'combined-stream': [ '1.0.8' ],
+30 silly audit   commander: [ '4.1.1' ],
+30 silly audit   cssesc: [ '3.0.0' ],
+30 silly audit   csstype: [ '3.2.3' ],
+30 silly audit   dayjs: [ '1.11.20' ],
+30 silly audit   debug: [ '4.4.3' ],
+30 silly audit   'delayed-stream': [ '1.0.0' ],
+30 silly audit   didyoumean: [ '1.2.2' ],
+30 silly audit   dlv: [ '1.1.3' ],
+30 silly audit   'dunder-proto': [ '1.0.1' ],
+30 silly audit   'electron-to-chromium': [ '1.5.361' ],
+30 silly audit   'element-plus': [ '2.14.0' ],
+30 silly audit   entities: [ '7.0.1' ],
+30 silly audit   'es-define-property': [ '1.0.1' ],
+30 silly audit   'es-errors': [ '1.3.0' ],
+30 silly audit   'es-object-atoms': [ '1.1.2' ],
+30 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+30 silly audit   esbuild: [ '0.21.5' ],
+30 silly audit   escalade: [ '3.2.0' ],
+30 silly audit   'estree-walker': [ '2.0.2' ],
+30 silly audit   'fast-glob': [ '3.3.3' ],
+30 silly audit   fastq: [ '1.20.1' ],
+30 silly audit   'fill-range': [ '7.1.1' ],
+30 silly audit   'follow-redirects': [ '1.16.0' ],
+30 silly audit   'form-data': [ '4.0.5' ],
+30 silly audit   'fraction.js': [ '5.3.4' ],
+30 silly audit   fsevents: [ '2.3.3' ],
+30 silly audit   'function-bind': [ '1.1.2' ],
+30 silly audit   'get-intrinsic': [ '1.3.0' ],
+30 silly audit   'get-proto': [ '1.0.1' ],
+30 silly audit   gopd: [ '1.2.0' ],
+30 silly audit   'has-symbols': [ '1.1.0' ],
+30 silly audit   'has-tostringtag': [ '1.0.2' ],
+30 silly audit   hasown: [ '2.0.3' ],
+30 silly audit   'https-proxy-agent': [ '5.0.1' ],
+30 silly audit   'is-binary-path': [ '2.1.0' ],
+30 silly audit   'is-core-module': [ '2.16.2' ],
+30 silly audit   'is-extglob': [ '2.1.1' ],
+30 silly audit   'is-glob': [ '4.0.3' ],
+30 silly audit   'is-number': [ '7.0.0' ],
+30 silly audit   jiti: [ '1.21.7' ],
+30 silly audit   lilconfig: [ '3.1.3' ],
+30 silly audit   'lines-and-columns': [ '1.2.4' ],
+30 silly audit   lodash: [ '4.18.1' ],
+30 silly audit   'lodash-es': [ '4.18.1' ],
+30 silly audit   'lodash-unified': [ '1.0.3' ],
+30 silly audit   'magic-string': [ '0.30.21' ],
+30 silly audit   'math-intrinsics': [ '1.1.0' ],
+30 silly audit   'memoize-one': [ '6.0.0' ],
+30 silly audit   merge2: [ '1.4.1' ],
+30 silly audit   micromatch: [ '4.0.8' ],
+30 silly audit   'mime-db': [ '1.52.0' ],
+30 silly audit   'mime-types': [ '2.1.35' ],
+30 silly audit   ms: [ '2.1.3' ],
+30 silly audit   mz: [ '2.7.0' ],
+30 silly audit   nanoid: [ '3.3.12' ],
+30 silly audit   'node-releases': [ '2.0.46' ],
+30 silly audit   'normalize-path': [ '3.0.0' ],
+30 silly audit   'normalize-wheel-es': [ '1.2.0' ],
+30 silly audit   'object-assign': [ '4.1.1' ],
+30 silly audit   'object-hash': [ '3.0.0' ],
+30 silly audit   'path-parse': [ '1.0.7' ],
+30 silly audit   picocolors: [ '1.1.1' ],
+30 silly audit   picomatch: [ '2.3.2', '4.0.4' ],
+30 silly audit   pify: [ '2.3.0' ],
+30 silly audit   pirates: [ '4.0.7' ],
+30 silly audit   postcss: [ '8.5.15' ],
+30 silly audit   'postcss-import': [ '15.1.0' ],
+30 silly audit   'postcss-js': [ '4.1.0' ],
+30 silly audit   'postcss-load-config': [ '6.0.1' ],
+30 silly audit   'postcss-nested': [ '6.2.0' ],
+30 silly audit   'postcss-selector-parser': [ '6.1.2' ],
+30 silly audit   'postcss-value-parser': [ '4.2.0' ],
+30 silly audit   'proxy-from-env': [ '2.1.0' ],
+30 silly audit   'queue-microtask': [ '1.2.3' ],
+30 silly audit   'read-cache': [ '1.0.0' ],
+30 silly audit   readdirp: [ '3.6.0' ],
+30 silly audit   resolve: [ '1.22.12' ],
+30 silly audit   reusify: [ '1.1.0' ],
+30 silly audit   rollup: [ '4.60.4' ],
+30 silly audit   'run-parallel': [ '1.2.0' ],
+30 silly audit   'source-map-js': [ '1.2.1' ],
+30 silly audit   sucrase: [ '3.35.1' ],
+30 silly audit   'supports-preserve-symlinks-flag': [ '1.0.0' ],
+30 silly audit   tailwindcss: [ '3.4.19' ],
+30 silly audit   thenify: [ '3.3.1' ],
+30 silly audit   'thenify-all': [ '1.6.0' ],
+30 silly audit   tinyglobby: [ '0.2.16' ],
+30 silly audit   fdir: [ '6.5.0' ],
+30 silly audit   'to-regex-range': [ '5.0.1' ],
+30 silly audit   'ts-interface-checker': [ '0.1.13' ],
+30 silly audit   'update-browserslist-db': [ '1.2.3' ],
+30 silly audit   'util-deprecate': [ '1.0.2' ],
+30 silly audit   vite: [ '5.4.21' ],
+30 silly audit   vue: [ '3.5.34' ],
+30 silly audit   'vue-component-type-helpers': [ '3.3.1' ],
+30 silly audit   'vue-router': [ '4.6.4' ],
+30 silly audit   echarts: [ '5.6.0' ],
+30 silly audit   tslib: [ '2.3.0' ],
+30 silly audit   zrender: [ '5.6.1' ]
+30 silly audit }
+31 http cache tslib@https://registry.npmmirror.com/tslib/-/tslib-2.3.0.tgz 0ms (cache hit)
+32 http cache zrender@https://registry.npmmirror.com/zrender/-/zrender-5.6.1.tgz 0ms (cache hit)
+33 http cache echarts@https://registry.npmmirror.com/echarts/-/echarts-5.6.0.tgz 0ms (cache hit)
+34 silly tarball no local data for tslib@https://registry.npmmirror.com/tslib/-/tslib-2.3.0.tgz. Extracting by manifest.
+35 silly tarball no local data for zrender@https://registry.npmmirror.com/zrender/-/zrender-5.6.1.tgz. Extracting by manifest.
+36 silly tarball no local data for echarts@https://registry.npmmirror.com/echarts/-/echarts-5.6.0.tgz. Extracting by manifest.
+37 http fetch GET 200 https://cdn.npmmirror.com/packages/tslib/2.3.0/tslib-2.3.0.tgz 285ms (cache miss)
+38 http fetch GET 200 https://cdn.npmmirror.com/packages/zrender/5.6.1/zrender-5.6.1.tgz 940ms (cache miss)
+39 http fetch POST 404 https://registry.npmmirror.com/-/npm/v1/security/advisories/bulk 1223ms (cache skip)
+40 verbose audit error HttpErrorGeneral: 404 Not Found - POST https://registry.npmmirror.com/-/npm/v1/security/advisories/bulk - [NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet
+40 verbose audit error     at C:\Program Files\nodejs\node_modules\npm\node_modules\npm-registry-fetch\lib\check-response.js:103:15
+40 verbose audit error     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+40 verbose audit error     at async #getReport (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\audit-report.js:275:19)
+40 verbose audit error     at async AuditReport.run (C:\Program Files\nodejs\node_modules\npm\node_modules\@npmcli\arborist\lib\audit-report.js:100:19) {
+40 verbose audit error   headers: [Object: null prototype] {
+40 verbose audit error     server: [ 'Tengine' ],
+40 verbose audit error     date: [ 'Mon, 25 May 2026 13:18:31 GMT' ],
+40 verbose audit error     'content-type': [ 'application/json' ],
+40 verbose audit error     'transfer-encoding': [ 'chunked' ],
+40 verbose audit error     connection: [ 'keep-alive' ],
+40 verbose audit error     'strict-transport-security': [ 'max-age=5184000' ],
+40 verbose audit error     via: [ 'kunlun6.cn9014[,404666]' ],
+40 verbose audit error     'timing-allow-origin': [ '*' ],
+40 verbose audit error     eagleid: [ '759d831a17797151111594514e' ],
+40 verbose audit error     'x-fetch-attempts': [ '1' ],
+40 verbose audit error     'x-local-cache-status': [ 'skip' ]
+40 verbose audit error   },
+40 verbose audit error   statusCode: 404,
+40 verbose audit error   code: 'E404',
+40 verbose audit error   method: 'POST',
+40 verbose audit error   uri: 'https://registry.npmmirror.com/-/npm/v1/security/advisories/bulk',
+40 verbose audit error   body: {
+40 verbose audit error     error: '[NOT_IMPLEMENTED] /-/npm/v1/security/* not implemented yet'
+40 verbose audit error   },
+40 verbose audit error   pkgid: undefined
+40 verbose audit error }
+41 silly audit error [object Object]
+42 silly audit report null
+43 http fetch GET 200 https://cdn.npmmirror.com/packages/echarts/5.6.0/echarts-5.6.0.tgz 7444ms (cache miss)
+44 silly ADD node_modules/zrender
+45 silly ADD node_modules/tslib
+46 silly ADD node_modules/echarts
+47 verbose cwd C:\PyTorch_Project\VisionProject\frontend
+48 verbose os Windows_NT 10.0.26200
+49 verbose node v24.11.0
+50 verbose npm  v11.6.1
+51 verbose exit 0
+52 info ok

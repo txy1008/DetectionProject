@@ -1,0 +1,2 @@
+
+0ec9a82aa38ad97675d73f1cd39d5610bf6978da	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/follow-redirects","integrity":null,"time":1779714359193,"size":"262","metadata":{"time":1779714359193,"url":"http://registry.npm.taobao.org/follow-redirects","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:05:59 GMT","location":"https://registry.npmmirror.com/follow-redirects"},"options":{"compress":true},"status":301}}

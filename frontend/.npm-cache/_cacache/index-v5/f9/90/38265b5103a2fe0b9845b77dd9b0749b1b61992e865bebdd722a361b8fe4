@@ -1,0 +1,2 @@
+
+c91a72dd0a61388bc63466e663064e509c98100c	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/@rollup%2frollup-android-arm64","integrity":null,"time":1779714025859,"size":"262","metadata":{"time":1779714025859,"url":"http://registry.npm.taobao.org/@rollup%2frollup-android-arm64","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:25 GMT","location":"https://registry.npmmirror.com/@rollup%2frollup-android-arm64"},"options":{"compress":true},"status":301}}

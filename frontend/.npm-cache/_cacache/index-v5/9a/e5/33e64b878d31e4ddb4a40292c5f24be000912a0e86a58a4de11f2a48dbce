@@ -1,0 +1,2 @@
+
+15b2cd00ecb1de2cb54dd76761e96dbefb22b4de	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/sucrase","integrity":null,"time":1779714003770,"size":"262","metadata":{"time":1779714003770,"url":"http://registry.npm.taobao.org/sucrase","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:03 GMT","location":"https://registry.npmmirror.com/sucrase"},"options":{"compress":true},"status":301}}

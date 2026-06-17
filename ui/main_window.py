@@ -1,10 +1,11 @@
+import os
 import cv2
 import numpy as np
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout,
                                QPushButton, QLabel, QTextEdit, QFileDialog,
                                QTableWidget, QTableWidgetItem, QHeaderView,
                                QGroupBox, QGridLayout, QTabWidget,
-                               QMessageBox, QSlider)
+                               QMessageBox, QSlider, QComboBox)
 from PySide6.QtCore import Qt, Slot
 from PySide6.QtGui import QImage, QPixmap
 
@@ -82,9 +83,9 @@ class MainWindow(QMainWindow):
         main_layout.addLayout(left_panel, 7)
 
         # 图片检测结果缓存（用于点击筛选）
-        self._img_original_frame = None    # 原图 numpy
-        self._img_annotated_frame = None   # 全框检测图 numpy
-        self._img_detections = []           # [{id, box, name, conf, color}, ...]
+        self._img_original_frame = None  # 原图 numpy
+        self._img_annotated_frame = None  # 全框检测图 numpy
+        self._img_detections = []  # [{id, box, name, conf, color}, ...]
 
         # ========== 右侧：控制面板 ==========
         right_panel = QVBoxLayout()
@@ -152,6 +153,21 @@ class MainWindow(QMainWindow):
         conf_layout.addWidget(self.conf_label)
         conf_group.setLayout(conf_layout)
         right_panel.addWidget(conf_group)
+
+        # --- 模型选择 ---
+        model_group = QGroupBox("🧠 模型选择")
+        model_group.setStyleSheet(
+            "QGroupBox { font-size: 14px; font-weight: bold; color: #333; "
+            "border: 1px solid #dee2e6; border-radius: 6px; margin-top: 8px; padding-top: 16px; }"
+            "QGroupBox::title { subcontrol-origin: margin; left: 10px; }")
+        model_layout = QHBoxLayout()
+        self.model_combo = QComboBox()
+        self.model_combo.setStyleSheet("padding: 4px; border-radius: 3px; border: 1px solid #ccc; font-size: 13px;")
+        self._refresh_model_list()
+        self.model_combo.currentTextChanged.connect(self._on_model_changed)
+        model_layout.addWidget(self.model_combo)
+        model_group.setLayout(model_layout)
+        right_panel.addWidget(model_group)
 
         # --- 选项卡：明细 / 日志 ---
         self.tabs = QTabWidget()
@@ -226,6 +242,53 @@ class MainWindow(QMainWindow):
         self.processor = DetectionProcessor()  # 用于单图检测
 
     # ==================== 业务逻辑 ====================
+
+    def _refresh_model_list(self):
+        """扫描models目录下的.pt文件并填充下拉框"""
+        self.model_combo.blockSignals(True)
+        self.model_combo.clear()
+        model_dir = "models"
+        if os.path.exists(model_dir):
+            models = [f for f in os.listdir(model_dir) if f.endswith('.pt')]
+            if models:
+                self.model_combo.addItems(models)
+                # 尝试选中当前config中的模型
+                current_model_name = os.path.basename(config.MODEL_PATH)
+                if current_model_name in models:
+                    self.model_combo.setCurrentText(current_model_name)
+            else:
+                self.model_combo.addItem("未找到模型文件")
+        else:
+            self.model_combo.addItem("models目录不存在")
+        self.model_combo.blockSignals(False)
+
+    def _on_model_changed(self, model_name):
+        """下拉框改变时触发模型切换"""
+        if not model_name or model_name.endswith("不存在") or model_name.endswith("文件"):
+            return
+
+        model_path = os.path.join("models", model_name)
+        self.log_output.append(f"🔄 正在加载新模型: {model_name}，请稍候...")
+        self.statusBar().showMessage(f"正在加载新模型: {model_name}...")
+
+        # 1. 切换单图检测的处理器模型
+        if hasattr(self, 'processor'):
+            self.processor.change_model(model_path)
+
+        # 2. 如果视频正在运行，切换视频线程中的模型
+        if self.thread and hasattr(self.thread, 'update_model'):
+            # 切换模型时短暂暂停视频，防止崩溃
+            was_running = not self.thread.paused
+            if was_running:
+                self.thread.pause()
+
+            self.thread.update_model(model_path)
+
+            if was_running:
+                self.thread.resume()
+
+        self.log_output.append(f"✅ 模型 {model_name} 切换完成！")
+        self.statusBar().showMessage(f"模型切换完成", 3000)
 
     def select_video(self):
         path, _ = QFileDialog.getOpenFileName(self, "选择视频文件", "", "Videos (*.mp4 *.avi *.mkv)")

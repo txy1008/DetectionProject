@@ -1,0 +1,2 @@
+
+79e9e3ba65fae3deef7c6b68abac241af5620b8c	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/tailwindcss","integrity":null,"time":1779714002074,"size":"262","metadata":{"time":1779714002074,"url":"http://registry.npm.taobao.org/tailwindcss","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:02 GMT","location":"https://registry.npmmirror.com/tailwindcss"},"options":{"compress":true},"status":301}}

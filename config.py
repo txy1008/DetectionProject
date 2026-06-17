@@ -4,13 +4,16 @@
 
 # ==================== 模型配置 ====================
 # 切换模型：将路径改为你自己训练的 best.pt 即可
-MODEL_PATH = "models/yolov8n.pt"
+MODEL_PATH = "models/best3.pt"
 # MODEL_PATH = "models/best.pt"  # 自训练模型（训练好后取消注释）
 
 # 检测置信度阈值
-CONF_VIDEO = 0.6       # 视频模式置信度
-CONF_IMAGE = 0.4       # 单图模式置信度
-IOU_THRESHOLD = 0.5    # NMS IOU 阈值
+CONF_VIDEO = 0.1       # 视频模式置信度
+CONF_IMAGE = 0.1       # 单图模式置信度
+IOU_THRESHOLD = 0.2    # NMS IOU 阈值
+
+# 推理设备：0 表示第一张 CUDA GPU；无 GPU 时可改为 "cpu"
+YOLO_DEVICE = 0
 
 # 目标稳定帧数（连续出现 N 帧才确认为有效目标）
 STABLE_FRAMES = 5
@@ -23,15 +26,11 @@ DEEPSORT_EMBEDDER = "mobilenet"  # ReID 模型: mobilenet / torchreid / clip_RN5
 DEEPSORT_EMBEDDER_GPU = True  # ReID 是否用 GPU
 
 # ==================== 类别映射 ====================
-# COCO 数据集 ID → 自定义类别
-# 如果你自训练的模型类别 ID 不同，在这里修改
+# 自训练模型类别 ID → 自定义类别
 CLASS_MAPPING = {
-    0: "person",      # COCO: person
-    1: "bicycle",     # COCO: bicycle
-    2: "car",         # COCO: car
-    3: "bicycle",     # COCO: motorcycle → 归为非机动车
-    5: "car",         # COCO: bus → 归为机动车
-    7: "car",         # COCO: truck → 归为机动车
+    0: "person",
+    1: "car",
+    2: "bicycle",
 }
 
 # 需要检测的 COCO 类别 ID 列表（自动从映射表生成）
@@ -41,7 +40,7 @@ TARGET_CLASSES = list(CLASS_MAPPING.keys())
 DB_CONFIG = {
     'host': 'localhost',
     'user': 'root',
-    'password': 'Txy20041008',  # 修改为你的 MySQL 密码
+    'password': '20041027',  # 修改为你的 MySQL 密码
     'database': 'traffic_system_db'
 }
 
