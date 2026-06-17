@@ -1,2 +1,0 @@
-
-b6432d22b9d9ddf4684e4469f6e3d3b8e517630f	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/@rollup%2frollup-linux-riscv64-musl","integrity":null,"time":1779714026015,"size":"262","metadata":{"time":1779714026015,"url":"http://registry.npm.taobao.org/@rollup%2frollup-linux-riscv64-musl","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:25 GMT","location":"https://registry.npmmirror.com/@rollup%2frollup-linux-riscv64-musl"},"options":{"compress":true},"status":301}}

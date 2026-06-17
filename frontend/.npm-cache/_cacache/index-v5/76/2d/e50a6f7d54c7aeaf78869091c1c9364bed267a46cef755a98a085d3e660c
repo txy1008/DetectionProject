@@ -1,2 +1,0 @@
-
-b4fedff42a7defb83c4d5c9d2c72696a80caa61b	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/@esbuild%2fandroid-x64","integrity":null,"time":1779714025555,"size":"262","metadata":{"time":1779714025555,"url":"http://registry.npm.taobao.org/@esbuild%2fandroid-x64","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:25 GMT","location":"https://registry.npmmirror.com/@esbuild%2fandroid-x64"},"options":{"compress":true},"status":301}}

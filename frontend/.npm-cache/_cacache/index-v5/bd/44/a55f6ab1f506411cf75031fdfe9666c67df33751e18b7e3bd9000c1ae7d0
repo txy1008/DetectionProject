@@ -1,2 +1,0 @@
-
-f60b60452ca73b60e714d7dd2c68d07ef84d6b56	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/@vitejs%2fplugin-vue","integrity":null,"time":1779713997929,"size":"262","metadata":{"time":1779713997929,"url":"http://registry.npm.taobao.org/@vitejs%2fplugin-vue","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 12:59:57 GMT","location":"https://registry.npmmirror.com/@vitejs%2fplugin-vue"},"options":{"compress":true},"status":301}}

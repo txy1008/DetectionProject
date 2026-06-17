@@ -1,2 +1,0 @@
-
-3967beb5edd7bb4ce5d1e5e0f1fc78195cf41fa7	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/@floating-ui%2fdom","integrity":null,"time":1779714002764,"size":"262","metadata":{"time":1779714002764,"url":"http://registry.npm.taobao.org/@floating-ui%2fdom","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:02 GMT","location":"https://registry.npmmirror.com/@floating-ui%2fdom"},"options":{"compress":true},"status":301}}

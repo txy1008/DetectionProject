@@ -1,2 +1,0 @@
-
-00d27859f02138b56050a201425a45a1ac03968e	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/fsevents","integrity":null,"time":1779714003251,"size":"262","metadata":{"time":1779714003251,"url":"http://registry.npm.taobao.org/fsevents","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:03 GMT","location":"https://registry.npmmirror.com/fsevents"},"options":{"compress":true},"status":301}}

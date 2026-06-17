@@ -1,2 +1,0 @@
-
-034fa7a7e2772960c4a6bcc9650a75df32aae18c	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/@esbuild%2fdarwin-arm64","integrity":null,"time":1779714025547,"size":"262","metadata":{"time":1779714025547,"url":"http://registry.npm.taobao.org/@esbuild%2fdarwin-arm64","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:25 GMT","location":"https://registry.npmmirror.com/@esbuild%2fdarwin-arm64"},"options":{"compress":true},"status":301}}

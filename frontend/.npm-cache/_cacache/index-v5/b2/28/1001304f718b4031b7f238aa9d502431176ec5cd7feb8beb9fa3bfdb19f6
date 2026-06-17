@@ -1,2 +1,0 @@
-
-d451c16f4c0de76acb3ba78a8653be1240b89168	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/math-intrinsics","integrity":null,"time":1779714362638,"size":"262","metadata":{"time":1779714362638,"url":"http://registry.npm.taobao.org/math-intrinsics","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:06:02 GMT","location":"https://registry.npmmirror.com/math-intrinsics"},"options":{"compress":true},"status":301}}

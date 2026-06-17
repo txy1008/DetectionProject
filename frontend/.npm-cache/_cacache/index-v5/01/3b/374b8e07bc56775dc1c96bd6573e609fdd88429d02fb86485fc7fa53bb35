@@ -1,2 +1,0 @@
-
-62f17f373a0db2efcc85f7a34d0d80f84385bdb9	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/tslib","integrity":null,"time":1779715102956,"size":"262","metadata":{"time":1779715102956,"url":"http://registry.npm.taobao.org/tslib","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:18:22 GMT","location":"https://registry.npmmirror.com/tslib"},"options":{"compress":true},"status":301}}

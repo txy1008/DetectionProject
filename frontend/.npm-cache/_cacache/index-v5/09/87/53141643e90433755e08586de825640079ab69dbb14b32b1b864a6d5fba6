@@ -1,2 +1,0 @@
-
-1299a58b2fec1b116543e79843c5d9c72721b210	{"key":"make-fetch-happen:request-cache:http://registry.npm.taobao.org/object-hash","integrity":null,"time":1779714003626,"size":"262","metadata":{"time":1779714003626,"url":"http://registry.npm.taobao.org/object-hash","reqHeaders":{"accept":"application/json"},"resHeaders":{"content-type":"text/html","date":"Mon, 25 May 2026 13:00:03 GMT","location":"https://registry.npmmirror.com/object-hash"},"options":{"compress":true},"status":301}}
