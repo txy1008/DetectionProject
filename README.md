@@ -1,138 +1,144 @@
-# 智能行人与车辆检测计数系统 (V5.1 专业版 · DeepSORT)
+这是一份基于您提供的 `processor.py` 代码生成的 Markdown 格式的 `README.md` 文档。您可以直接将其复制到您的项目中使用。
 
-## 1. 项目简介
+---
 
-本项目是一款基于深度学习技术的**智慧交通监控系统**。系统能够实时检测视频流、摄像头或单张图片中的行人及车辆，通过 **DeepSORT** 多目标追踪算法（含 ReID 外观特征匹配）为每个目标分配唯一 ID，并实现分类计数、越线统计、热力图分析、区域入侵告警、速度估计等高级功能。系统集成了 MySQL 数据库进行持久化存储，支持 CSV 报表导出、历史数据图表分析及 PDF 报告生成。
+# 🚀 目标检测与追踪分析后端 (YOLO + DeepSORT)
 
-### 核心功能
+这是一个基于 YOLO 和 DeepSORT 的智能视频/图像分析后端处理模块 (`processor.py`)。该模块实现了目标的实时检测、多目标追踪、轨迹记录、速度估算、自动截图留存、数据库持久化以及自动生成丰富图表的 Word 数据报告。
 
-- **多源输入**：支持本地视频文件、USB 摄像头实时流、单张图片检测。
-- **精准分类**：将 YOLO 默认类别重映射为：机动车 (car)、非机动车 (bicycle)、行人 (person) 三大类。
-- **DeepSORT 智能追踪**：采用 DeepSORT 算法（MobileNet ReID），利用外观特征进行跨帧关联，结合连续帧确认机制有效减少 ID 跳变和误检。
-- **数据管理**：
-  - **数据库**：实时将检测记录写入 MySQL，支持断连自动降级为 CSV。
-  - **文件系统**：按「报告_日期_第N次」自动创建场次文件夹，截图按类别细分存储。
-  - **报表导出**：同步生成 CSV 格式检测报告。
-- **历史分析**：加载历史 CSV 数据，生成饼图与柱状图，支持一键导出 PDF 报告。
-- **实时统计看板**：6 项指标实时更新（三类计数 + 上行/下行 + 总计）。
+## ✨ 核心特性
 
-## 2. 技术栈
+- **🧠 智能检测与追踪**：整合 `Ultralytics YOLO` 进行高精度目标检测，利用 `DeepSORT` 进行视频流的稳定多目标追踪（抗遮挡、去重）。
+- **🔄 动态配置**：支持在运行时无缝切换 YOLO 模型 (`change_model`)，并支持动态调整置信度阈值。
+- **👥 多用户会话管理**：通过 `start_session` 隔离不同用户的数据，自动建立规范的本地文件存储目录（支持按天、按次划分）。
+- **💾 数据持久化落地**：
+  - **图片留存**：自动对检测到的目标进行精准抠图（Crop）并按类别分类保存。
+  - **数据库录入**：无缝对接 MySQL，记录每次检测的详细元数据（时间、ID、类别、置信度、路径）。
+  - **CSV 备份**：实时同步生成 CSV 格式的检测流水账。
+- **📊 自动化数据报告**：一键生成结构化的 `.docx` (Word) 检测报告，内置数据摘要、明细表格以及由 `Matplotlib` 自动生成的分析图表（饼图、柱状图）。
+- **⚡ 针对性优化**：
+  - **双模式处理**：区分单图模式（仅检测）与视频模式（检测+追踪+测速）。
+  - **防崩溃机制**：内置 DeepSORT 特征维度冲突异常捕获及自动重启机制。
+  - **并发写保护**：为截取文件名加入序号 (`seq_num`)，防止同秒内目标文件互相覆盖。
 
-| 模块 | 技术 |
-|------|------|
-| 检测模型 | Ultralytics YOLOv8 (yolov8n.pt)，支持自训练模型切换 |
-| 追踪算法 | DeepSORT（deep-sort-realtime），MobileNet ReID 外观特征 |
-| 深度学习框架 | PyTorch |
-| 图像处理 | OpenCV-Python |
-| 界面开发 | PySide6 (Qt for Python)，多线程架构 |
-| 数据可视化 | Matplotlib（图表 + PDF 导出） |
-| 数据处理 | Pandas |
-| 数据库 | MySQL 8.0 |
+---
 
-## 3. 项目结构
+## 🛠️ 技术栈与依赖
 
-```
-VisionProject/
-├── main.py              # 程序入口
-├── config.py            # 集中配置文件（模型/数据库/阈值/DeepSORT/UI）
-├── processor.py         # 后端 AI 核心：YOLO检测 + DeepSORT追踪 + 数据持久化
-├── ui/                  # 界面模块
-│   ├── __init__.py      # 包初始化与导出
-│   ├── main_window.py   # 主窗口布局与业务逻辑
-│   ├── video_thread.py  # 视频处理子线程（QThread）
-│   ├── history_dialog.py# 历史数据分析弹窗 + PDF 导出
-│   └── alert_manager.py # 区域入侵告警管理器
-├── models/              # 存放 YOLO 模型权重 (yolov8n.pt / best.pt)
-├── captures/            # 自动生成的场次截图文件夹（按类别分目录）
-├── results/             # 自动生成的 CSV 检测报告
-├── requirements.txt     # Python 依赖管理
-└── test_run.py          # 环境快速测试脚本
-```
+- **深度学习**：`torch`, `ultralytics` (YOLO)
+- **目标追踪**：`deep_sort_realtime`
+- **图像处理**：`OpenCV` (cv2)
+- **数据处理**：`pandas`, `numpy`
+- **数据库**：`mysql-connector-python`
+- **文档与图表**：`python-docx`, `matplotlib`
 
-## 4. 安装与配置
+*(需配合外部 `config.py` 提供数据库配置、路径常量及 DeepSORT 超参数)*
 
-### 4.1 环境安装
+---
 
-推荐使用清华大学镜像源安装依赖：
+## 📂 文件存储架构
 
-```bash
-pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+系统运行时，会自动根据用户和当前日期构建规范的存储目录：
+
+```text
+根目录/
+├── results/                     # 分析结果与报告目录
+│   └── {username}/              # 按用户隔离
+│       ├── 报告_20231027_第1次.csv    # 实时检测数据流
+│       └── 报告_20231027_第1次.docx   # 导出的 Word 统计报告
+└── captures/                    # 目标抓拍图存储目录
+    └── {username}/              
+        └── 报告_20231027_第1次/
+            ├── car/             # 抓拍的机动车图片
+            ├── bicycle/         # 抓拍的非机动车图片
+            └── person/          # 抓拍的行人图片
 ```
 
-### 4.2 数据库配置
+---
 
-在 MySQL Workbench 中运行以下脚本创建数据库：
+## 🗄️ 数据库表结构要求
+
+模块默认向 `detections` 表中写入数据。在使用前，请确保您的 MySQL 数据库包含以下表结构：
 
 ```sql
-CREATE DATABASE IF NOT EXISTS traffic_system_db;
-USE traffic_system_db;
-CREATE TABLE IF NOT EXISTS detections (
+CREATE TABLE detections (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    session_id VARCHAR(100),
-    obj_id INT,
-    category VARCHAR(50),
-    img_name VARCHAR(255),
-    img_path VARCHAR(500),
-    confidence FLOAT,
-    detect_time DATETIME
+    session_id VARCHAR(255),      -- 场次名称 (如：报告_20231027_第1次)
+    obj_id INT,                   -- 追踪/检测分配的 ID
+    category VARCHAR(50),         -- 类别 (car, bicycle, person)
+    img_name VARCHAR(255),        -- 截图文件名
+    img_path TEXT,                -- 截图本地绝对路径
+    confidence FLOAT,             -- 检测置信度
+    detect_time DATETIME          -- 检测到的时间
 );
 ```
 
-修改 `config.py` 中的 `DB_CONFIG`，填入你的 MySQL 密码。
+---
 
-### 4.3 自训练模型切换
+## 💻 核心 API 使用指南
 
-将训练好的 `best.pt` 放入 `models/` 目录，然后修改 `config.py`：
-
+### 1. 初始化处理器
 ```python
-MODEL_PATH = "models/best.pt"
+from processor import DetectionProcessor
+
+# 初始化，自动加载 config.py 中的模型和配置
+processor = DetectionProcessor()
 ```
 
-如果自训练模型的类别 ID 与 COCO 不同，同步修改 `CLASS_MAPPING`。
+### 2. 启动新会话
+每次处理新的视频或图像批次前，建议开启新会话以隔离数据。
+```python
+session_name = processor.start_session(username="admin_user")
+print(f"当前场次: {session_name}")
+```
 
-## 5. 算法逻辑说明
+### 3. 处理帧流 (单图 / 视频流)
+在主循环中传入 OpenCV 格式的图像帧 (`numpy.ndarray`)。
 
-### 5.1 类别映射 (Classification Mapping)
+**处理单张图片 (不启用追踪)：**
+```python
+annotated_frame, new_records = processor.process_frame(frame, is_image=True)
+```
 
-为符合交通统计标准，系统对检测目标进行了逻辑归并：
+**处理连续视频流 (启用 DeepSORT 追踪与测速)：**
+```python
+annotated_frame, new_records = processor.process_frame(frame, is_image=False)
+```
+*返回值 `annotated_frame` 为绘制了检测框和标签的图像，`new_records` 为当前帧新增的需保存的记录字典列表。*
 
-- `bus, truck, car` → **car** (机动车)
-- `motorcycle, bicycle` → **bicycle** (非机动车/电动车)
-- `person` → **person** (行人)
+### 4. 获取实时统计
+```python
+stats = processor.get_stats()
+# 返回示例: {"car": 15, "bicycle": 5, "person": 22}
+```
 
-### 5.2 DeepSORT 追踪算法
+### 5. 生成并导出报告
+会话结束后，一键生成包含图表的 Word 报告。
+```python
+report_path = processor.generate_word_report()
+print(f"报告已生成至: {report_path}")
+```
 
-系统采用 **YOLO 检测 + DeepSORT 追踪** 的两阶段架构：
+### 6. 动态切换模型
+```python
+success = processor.change_model("path/to/new/yolov8_custom.pt")
+```
 
-1. **第一阶段**：YOLOv8 对每帧进行目标检测，输出检测框和类别。
-2. **第二阶段**：DeepSORT 利用 MobileNet 提取每个目标的**外观特征（ReID）**，结合卡尔曼滤波预测的运动状态，通过匈牙利算法进行跨帧数据关联。
+---
 
-相比 ByteTrack 仅依赖 IoU 匹配，DeepSORT 的外观特征使其在**遮挡后重新识别**同一目标时表现更优。
+## ⚙️ 核心处理逻辑流程 (视频模式)
 
-### 5.3 稳定性机制 (Stability Buffer)
+1. **YOLO 预检测**：获取原始画面中的边界框 (`boxes`)、类别 (`cls`) 和置信度 (`conf`)。
+2. **格式转换**：将 YOLO 的 `[x1, y1, x2, y2]` 转换为 DeepSORT 要求的 `([x, y, w, h], conf, cls)` 格式。
+3. **DeepSORT 追踪更新**：提取画面外观特征并更新卡尔曼滤波，维持跨帧目标的 ID 一致性。
+4. **异常轨过滤**：剔除未确认 (Unconfirmed) 和幽灵 (time_since_update > 0) 轨迹。
+5. **轨迹记录与测速**：记录目标中心点变化，若存在超过 5 帧的历史，则进行像素级速度估算。
+6. **逻辑防抖过滤**：目标必须连续出现在 `config.STABLE_FRAMES` 帧中才会被视为有效目标并录入系统。
+7. **数据固化**：对有效目标进行截图、保存至硬盘，并写入 MySQL 数据库及内存 Pandas Dataframe 中。
 
-- **缓冲机制**：新 ID 必须连续出现 5 帧以上才被判定为有效目标，有效降低误报。
-- **防覆盖命名**：截图文件名采用 `类别_ID_序号_时间` 格式，确保不会发生文件覆盖。
+---
 
-### 5.4 热力图衰减机制
+## ⚠️ 注意事项
 
-热力图数据每帧乘以 0.95 的衰减系数，使旧场景数据在约 1~2 秒内自然消退，适应视频场景切换。
-
-## 6. 使用说明
-
-1. 运行 `python main.py` 启动系统。
-2. 点击 **[开启摄像头]** 或 **[上传视频]** 进行实时动态检测。
-3. 点击 **[检测单张图片]** 进行静态高精度分析。
-4. 点击 **[热力图模式]** 切换热力图叠加显示。
-5. 点击 **[设置告警区域]** 输入坐标比例定义禁区。
-6. 点击 **[历史数据分析]** 查看图表并导出 PDF 报告。
-7. 检测结果实时刷新在右侧统计看板和明细表格中。
-8. 停止运行后，可在 `captures/` 和 `results/` 查看本次任务的详细导出内容。
-
-## 7. 设计亮点
-
-- **模块化架构**：前后端分离，配置集中管理，代码拆分为 8 个职责单一的模块。
-- **多线程处理**：通过 QThread + Signal/Slot 机制，AI 推理不阻塞 UI，保证界面流畅响应。
-- **DeepSORT 外观特征追踪**：基于 ReID 特征的深度关联，相比纯 IoU 匹配追踪更稳定。
-- **容错性**：数据库连接异常时自动降级为 CSV 存储，确保数据不丢失。
-- **多维度分析**：越线计数、热力图、速度估计、区域告警，覆盖智慧交通核心分析需求。
+1. **GUI 线程安全**：本模块中的 `matplotlib` 强制使用了 `Agg` 后端 (`matplotlib.use("Agg")`)，这非常适合在无头服务器或后台线程中生成图表，不会阻塞主 UI 线程。
+2. **配置文件依赖**：使用前必须保证项目根目录下存在 `config.py`，且包含 `MODEL_PATH`、`YOLO_DEVICE`、`DB_CONFIG`、`RESULTS_DIR`、`CAPTURES_DIR` 以及 DeepSORT 的相关超参数。
