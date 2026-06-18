@@ -1,0 +1,66 @@
+# ===================== Python 编译缓存 =====================
+__pycache__/
+*.pyc
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+.eggs/
+pip-log.txt
+.pytest_cache/
+.coverage
+
+# ===================== 虚拟环境（不上传） =====================
+.venv/
+venv/
+env/
+ENV/
+.env
+
+# ===================== 数据集【老师要求不上传】 =====================
+datasets/
+
+# ===================== YOLO训练日志、模型权重【不上传】 =====================
+runs/
+weights/
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.engine
+
+# ===================== DeepSort 源码与预训练权重 =====================
+deep_sort/
+*.t7
+
+# ===================== 推理生成图片、视频、结果文件 =====================
+*.jpg
+*.png
+*.jpeg
+*.mp4
+result_*.jpg
+result_*.mp4
+train_metrics.png
+infer_video_result.mp4
+count_result_*.csv
+
+# ===================== 临时日志、表格 =====================
+*.log
+*.csv
+*.txt.bak
+
+# ===================== IDE 工程缓存文件 =====================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ===================== Windows / Mac 系统隐藏文件 =====================
+.DS_Store
+Thumbs.db
+desktop.ini

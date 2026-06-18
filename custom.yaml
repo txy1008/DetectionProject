@@ -1,0 +1,16 @@
+# 数据集根目录（从项目根目录出发）
+path: ./datasets/traffic_dataset
+#path: traffic_dataset
+#测试所有测试数据集的
+
+# 训练集 / 验证集 / 测试集 图片路径（相对 path 而言）
+train: train/images
+val: val/images
+test: test/images
+
+# 3 分类配置（你合并后的类别）
+nc: 3
+names:
+  - person    # ID 0
+  - car       # ID 1
+  - bicycle   # ID 2
